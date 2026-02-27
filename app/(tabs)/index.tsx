@@ -1,98 +1,212 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import Svg, { Circle } from 'react-native-svg';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Colors, Shadows, FontSize } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DateSelector } from '@/components/shared/date-selector';
+import { MealCard } from '@/components/shared/meal-card';
+import { MacroPill } from '@/components/dashboard/macro-pill';
 
-export default function HomeScreen() {
+const MOCK_MEALS = [
+  { id: '1', name: 'Avocado Toast', mealType: 'Breakfast', time: '8:30 AM', calories: 350 },
+  { id: '2', name: 'Green Bowl', mealType: 'Lunch', time: '12:45 PM', calories: 420 },
+  { id: '3', name: 'Raw Almonds', mealType: 'Snack', time: '4:00 PM', calories: 150 },
+];
+
+export default function DashboardScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+  const router = useRouter();
+
+  const totalCalories = 1240;
+  const calorieGoal = 2200;
+  const progress = totalCalories / calorieGoal;
+
+  const ringSize = 260;
+  const strokeWidth = 12;
+  const radius = (ringSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.header}>
+        <View>
+          <Text style={[styles.greeting, { color: colors.textMuted }]}>{greeting}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>Alex</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/settings')}
+          style={[styles.avatar, { borderColor: colors.surface, backgroundColor: colors.surface }]}
+        >
+          <MaterialIcons name="person" size={28} color={colors.primary} />
+          <View style={[styles.onlineDot, { backgroundColor: colors.primary, borderColor: colors.background }]} />
+        </TouchableOpacity>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <DateSelector />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Nourishment Ring */}
+        <View style={styles.ringContainer}>
+          <View style={[styles.ringBlob, { backgroundColor: colors.primary + '08' }]} />
+          <Svg width={ringSize} height={ringSize} style={styles.ringSvg}>
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke={colors.border}
+              strokeWidth={strokeWidth}
+              fill="none"
+            />
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke={colors.primary}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              rotation={-90}
+              origin={`${ringSize / 2}, ${ringSize / 2}`}
+            />
+          </Svg>
+          <View style={styles.ringCenter}>
+            <MaterialIcons name="spa" size={32} color={colors.primary} />
+            <Text style={[styles.ringCalories, { color: colors.text }]}>
+              {totalCalories.toLocaleString()}
+            </Text>
+            <Text style={[styles.ringLabel, { color: colors.textMuted }]}>kcal nourished</Text>
+          </View>
+        </View>
+
+        {/* Macro Pills */}
+        <View style={styles.macrosGrid}>
+          <MacroPill icon="egg-alt" label="Protein" value="60g" />
+          <MacroPill icon="grain" label="Carbs" value="120g" />
+          <MacroPill icon="water-drop" label="Fats" value="45g" />
+        </View>
+
+        {/* Today's Nourishment */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Nourishment</Text>
+          <TouchableOpacity>
+            <Text style={[styles.viewAll, { color: colors.primary }]}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {MOCK_MEALS.map((meal) => (
+          <MealCard key={meal.id} meal={meal} />
+        ))}
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* FAB */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.accent, ...Shadows.glow }]}
+        onPress={() => router.push('/scan')}
+        activeOpacity={0.8}
+      >
+        <MaterialIcons name="add" size={32} color="#FFF" />
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: { flex: 1 },
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 24,
+    paddingTop: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  greeting: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  userName: { fontSize: FontSize['3xl'], fontWeight: '700', marginTop: 2 },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onlineDot: {
     position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
+  scrollContent: { paddingBottom: 40 },
+  ringContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    height: 280,
+  },
+  ringBlob: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+  },
+  ringSvg: { position: 'absolute' },
+  ringCenter: { alignItems: 'center', justifyContent: 'center' },
+  ringCalories: {
+    fontSize: FontSize['5xl'],
+    fontWeight: '600',
+    letterSpacing: -1,
+    marginTop: 4,
+  },
+  ringLabel: { fontSize: FontSize.sm, fontWeight: '500', marginTop: 2 },
+  macrosGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    gap: 12,
+    marginTop: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  sectionTitle: { fontSize: FontSize.xl, fontWeight: '700' },
+  viewAll: { fontSize: FontSize.sm, fontWeight: '500' },
+  fab: {
+    position: 'absolute',
+    bottom: 100,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
   },
 });
