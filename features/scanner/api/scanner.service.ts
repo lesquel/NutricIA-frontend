@@ -7,7 +7,7 @@ import type { ScanResult, MealResponse, MealType } from '@/shared/types/api';
 
 export async function scanFood(imageUri: string): Promise<ScanResult> {
   const formData = new FormData();
-  formData.append('image', {
+  formData.append('file', {
     uri: imageUri,
     name: 'food.jpg',
     type: 'image/jpeg',

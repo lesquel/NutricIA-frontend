@@ -16,6 +16,21 @@ export async function updateProfile(data: {
   return apiClient.patch<UserProfile>('/users/me', data);
 }
 
+export async function uploadAvatar(imageUri: string): Promise<UserProfile> {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: imageUri,
+    name: 'avatar.jpg',
+    type: 'image/jpeg',
+  } as unknown as Blob);
+
+  return apiClient.upload<UserProfile>('/users/me/avatar', formData);
+}
+
+export async function deleteAvatar(): Promise<UserProfile> {
+  return apiClient.delete<UserProfile>('/users/me/avatar');
+}
+
 export async function updateGoals(data: {
   calorie_goal?: number;
   water_goal_ml?: number;
@@ -27,4 +42,8 @@ export async function updateDietaryPreferences(
   preferences: string[],
 ): Promise<UserProfile> {
   return apiClient.patch<UserProfile>('/users/me/diet', { preferences });
+}
+
+export async function deleteAccount(): Promise<void> {
+  return apiClient.delete<void>('/users/me');
 }
