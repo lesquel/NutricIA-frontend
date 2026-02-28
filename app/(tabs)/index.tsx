@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Svg, { Circle } from 'react-native-svg';
 
 import { Colors, Shadows, FontSize } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DateSelector } from '@/components/shared/date-selector';
-import { MealCard } from '@/components/shared/meal-card';
-import { MacroPill } from '@/components/dashboard/macro-pill';
+import { DateSelector } from '@/shared/components/date-selector';
+import { MealCard } from '@/shared/components/meal-card';
+import { MacroPill } from '@/shared/components/macro-pill';
+import { NourishmentRing } from '@/features/dashboard/components/nourishment-ring';
 
 const MOCK_MEALS = [
   { id: '1', name: 'Avocado Toast', mealType: 'Breakfast', time: '8:30 AM', calories: 350 },
@@ -24,13 +24,6 @@ export default function DashboardScreen() {
 
   const totalCalories = 1240;
   const calorieGoal = 2200;
-  const progress = totalCalories / calorieGoal;
-
-  const ringSize = 260;
-  const strokeWidth = 12;
-  const radius = (ringSize - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - progress);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -59,39 +52,7 @@ export default function DashboardScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Nourishment Ring */}
-        <View style={styles.ringContainer}>
-          <View style={[styles.ringBlob, { backgroundColor: colors.primary + '08' }]} />
-          <Svg width={ringSize} height={ringSize} style={styles.ringSvg}>
-            <Circle
-              cx={ringSize / 2}
-              cy={ringSize / 2}
-              r={radius}
-              stroke={colors.border}
-              strokeWidth={strokeWidth}
-              fill="none"
-            />
-            <Circle
-              cx={ringSize / 2}
-              cy={ringSize / 2}
-              r={radius}
-              stroke={colors.primary}
-              strokeWidth={strokeWidth}
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              rotation={-90}
-              origin={`${ringSize / 2}, ${ringSize / 2}`}
-            />
-          </Svg>
-          <View style={styles.ringCenter}>
-            <MaterialIcons name="spa" size={32} color={colors.primary} />
-            <Text style={[styles.ringCalories, { color: colors.text }]}>
-              {totalCalories.toLocaleString()}
-            </Text>
-            <Text style={[styles.ringLabel, { color: colors.textMuted }]}>kcal nourished</Text>
-          </View>
-        </View>
+        <NourishmentRing totalCalories={totalCalories} calorieGoal={calorieGoal} />
 
         {/* Macro Pills */}
         <View style={styles.macrosGrid}>
@@ -161,27 +122,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   scrollContent: { paddingBottom: 40 },
-  ringContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-    height: 280,
-  },
-  ringBlob: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-  },
-  ringSvg: { position: 'absolute' },
-  ringCenter: { alignItems: 'center', justifyContent: 'center' },
-  ringCalories: {
-    fontSize: FontSize['5xl'],
-    fontWeight: '600',
-    letterSpacing: -1,
-    marginTop: 4,
-  },
-  ringLabel: { fontSize: FontSize.sm, fontWeight: '500', marginTop: 2 },
   macrosGrid: {
     flexDirection: 'row',
     paddingHorizontal: 24,
