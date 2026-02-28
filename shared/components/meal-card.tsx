@@ -1,6 +1,6 @@
 /**
  * Shared MealCard component.
- * Re-exported from shared/components for feature modules.
+ * Accepts either a MealResponse (from API) or a simple legacy shape.
  */
 
 import React from 'react';
@@ -9,22 +9,44 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { MealResponse } from '@/shared/types/api';
+
+type LegacyMeal = {
+  id: string;
+  name: string;
+  mealType: string;
+  time: string;
+  calories: number;
+  tag?: string;
+};
 
 type MealCardProps = {
-  meal: {
-    id: string;
-    name: string;
-    mealType: string;
-    time: string;
-    calories: number;
-    tag?: string;
-  };
+  meal: MealResponse | LegacyMeal;
   onPress?: () => void;
 };
+
+function isApiMeal(meal: MealResponse | LegacyMeal): meal is MealResponse {
+  return 'food_name' in meal;
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
 
 export function MealCard({ meal, onPress }: MealCardProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+
+  const name = isApiMeal(meal) ? meal.food_name : meal.name;
+  const mealType = isApiMeal(meal) ? capitalize(meal.meal_type) : meal.mealType;
+  const time = isApiMeal(meal) ? formatTime(meal.created_at) : meal.time;
+  const { calories } = meal;
+  const tag = isApiMeal(meal) ? meal.tags?.[0] : meal.tag;
 
   return (
     <TouchableOpacity
@@ -45,20 +67,20 @@ export function MealCard({ meal, onPress }: MealCardProps) {
 
       <View style={styles.info}>
         <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-          {meal.name}
+          {name}
         </Text>
         <Text style={[styles.meta, { color: colors.textMuted }]}>
-          {meal.mealType} • {meal.time}
+          {mealType} • {time}
         </Text>
-        {meal.tag && (
+        {tag && (
           <View style={[styles.tagBadge, { backgroundColor: colors.primary + '15' }]}>
-            <Text style={[styles.tagText, { color: colors.primary }]}>{meal.tag}</Text>
+            <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.calorieBox}>
-        <Text style={[styles.calorieValue, { color: colors.text }]}>{meal.calories}</Text>
+        <Text style={[styles.calorieValue, { color: colors.text }]}>{calories}</Text>
         <Text style={[styles.calorieUnit, { color: colors.textMuted }]}>kcal</Text>
       </View>
     </TouchableOpacity>

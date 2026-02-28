@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -12,6 +15,9 @@ import { useRouter } from 'expo-router';
 
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeStore, type ThemePreference } from '@/shared/store/theme.store';
+import { useUserSettings, useUpdateGoals, useUpdateDietaryPreferences } from '@/features/settings/hooks/use-settings';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 const DIET_TAGS = [
   'Vegan',
@@ -24,31 +30,61 @@ const DIET_TAGS = [
   'Mediterranean',
 ];
 
-const SETTINGS_ITEMS: {
-  icon: keyof typeof MaterialIcons.glyphMap;
-  label: string;
-  value?: string;
-}[] = [
-  { icon: 'notifications-none', label: 'Notifications', value: 'On' },
-  { icon: 'palette', label: 'Theme', value: 'System' },
-  { icon: 'security', label: 'Privacy & Data' },
-  { icon: 'help-outline', label: 'Help & Support' },
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { value: 'system', label: 'System', icon: 'settings-suggest' },
+  { value: 'light', label: 'Light', icon: 'light-mode' },
+  { value: 'dark', label: 'Dark', icon: 'dark-mode' },
 ];
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
 
-  const [calorieGoal, setCalorieGoal] = useState(2100);
-  const [waterGoal, setWaterGoal] = useState(2500);
-  const [activeTags, setActiveTags] = useState<string[]>(['Vegan', 'Low Sugar']);
+  const user = useAuthStore((s) => s.user);
+  const { data: settings, isLoading } = useUserSettings();
+  const updateGoals = useUpdateGoals();
+  const updateDietaryPrefs = useUpdateDietaryPreferences();
+
+  const [calorieGoal, setCalorieGoal] = useState(user?.calorie_goal ?? 2100);
+  const [waterGoal, setWaterGoal] = useState(user?.water_goal_ml ?? 2500);
+  const [activeTags, setActiveTags] = useState<string[]>(user?.dietary_preferences ?? []);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+
+  // Sync from server data when it arrives
+  useEffect(() => {
+    if (settings) {
+      setCalorieGoal(settings.calorie_goal);
+      setWaterGoal(settings.water_goal_ml);
+      setActiveTags(settings.dietary_preferences);
+    }
+  }, [settings]);
+
+  const handleCalorieChange = (delta: number) => {
+    const next = Math.max(1200, Math.min(3500, calorieGoal + delta));
+    setCalorieGoal(next);
+    updateGoals.mutate({ calorie_goal: next });
+  };
+
+  const handleWaterChange = (delta: number) => {
+    const next = Math.max(1000, Math.min(4000, waterGoal + delta));
+    setWaterGoal(next);
+    updateGoals.mutate({ water_goal_ml: next });
+  };
 
   const toggleTag = (tag: string) => {
-    setActiveTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    const next = activeTags.includes(tag)
+      ? activeTags.filter((t) => t !== tag)
+      : [...activeTags, tag];
+    setActiveTags(next);
+    updateDietaryPrefs.mutate(next);
   };
+
+  const displayName = settings?.name ?? user?.name ?? 'User';
+  const initials = displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  const themeLabel = THEME_OPTIONS.find((o) => o.value === themePreference)?.label ?? 'System';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -69,13 +105,13 @@ export default function SettingsScreen() {
         <View style={styles.profileSection}>
           <View style={styles.avatarWrapper}>
             <View style={[styles.avatar, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
-              <Text style={styles.avatarInitials}>JD</Text>
+              <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
             <View style={[styles.editBadge, { backgroundColor: colors.surface, borderColor: colors.white }]}>
               <MaterialIcons name="edit" size={16} color={colors.primary} />
             </View>
           </View>
-          <Text style={[styles.profileName, { color: colors.text }]}>Jane Doe</Text>
+          <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
           <Text style={[styles.profileRole, { color: colors.primary }]}>Mindful Eater</Text>
           <TouchableOpacity
             style={[styles.editProfileBtn, { borderColor: `${colors.accent}50` }]}
@@ -117,13 +153,13 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.sliderBtnRow}>
                 <TouchableOpacity
-                  onPress={() => setCalorieGoal(Math.max(1200, calorieGoal - 100))}
+                  onPress={() => handleCalorieChange(-100)}
                   style={[styles.sliderBtn, { backgroundColor: colors.background }]}
                 >
                   <MaterialIcons name="remove" size={18} color={colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setCalorieGoal(Math.min(3500, calorieGoal + 100))}
+                  onPress={() => handleCalorieChange(100)}
                   style={[styles.sliderBtn, { backgroundColor: colors.background }]}
                 >
                   <MaterialIcons name="add" size={18} color={colors.text} />
@@ -160,13 +196,13 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.sliderBtnRow}>
                 <TouchableOpacity
-                  onPress={() => setWaterGoal(Math.max(1000, waterGoal - 250))}
+                  onPress={() => handleWaterChange(-250)}
                   style={[styles.sliderBtn, { backgroundColor: colors.background }]}
                 >
                   <MaterialIcons name="remove" size={18} color={colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setWaterGoal(Math.min(4000, waterGoal + 250))}
+                  onPress={() => handleWaterChange(250)}
                   style={[styles.sliderBtn, { backgroundColor: colors.background }]}
                 >
                   <MaterialIcons name="add" size={18} color={colors.text} />
@@ -217,34 +253,69 @@ export default function SettingsScreen() {
 
         {/* System Settings */}
         <View style={[styles.settingsList, { backgroundColor: colors.surface }]}>
-          {SETTINGS_ITEMS.map((item, index) => (
-            <TouchableOpacity
-              key={item.label}
-              style={[
-                styles.settingsRow,
-                index < SETTINGS_ITEMS.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.border,
-                },
-              ]}
-              activeOpacity={0.6}
-            >
-              <View style={styles.settingsRowLeft}>
-                <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
-                  <MaterialIcons name={item.icon} size={20} color={colors.primary} />
-                </View>
-                <Text style={[styles.settingsLabel, { color: colors.text }]}>{item.label}</Text>
+          {/* Notifications */}
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+            activeOpacity={0.6}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
+                <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
               </View>
-              <View style={styles.settingsRowRight}>
-                {item.value && (
-                  <Text style={[styles.settingsValue, { color: colors.textMuted }]}>
-                    {item.value}
-                  </Text>
-                )}
-                <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>Notifications</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              <Text style={[styles.settingsValue, { color: colors.textMuted }]}>On</Text>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Theme — opens picker */}
+          <TouchableOpacity
+            onPress={() => setShowThemePicker(true)}
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+            activeOpacity={0.6}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
+                <MaterialIcons name="palette" size={20} color={colors.primary} />
               </View>
-            </TouchableOpacity>
-          ))}
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>Theme</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              <Text style={[styles.settingsValue, { color: colors.textMuted }]}>{themeLabel}</Text>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Privacy */}
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+            activeOpacity={0.6}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
+                <MaterialIcons name="security" size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>Privacy & Data</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Help */}
+          <TouchableOpacity style={styles.settingsRow} activeOpacity={0.6}>
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
+                <MaterialIcons name="help-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>Help & Support</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Version */}
@@ -252,6 +323,49 @@ export default function SettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Theme Picker Modal */}
+      <Modal visible={showThemePicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowThemePicker(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Theme</Text>
+            {THEME_OPTIONS.map((opt) => {
+              const selected = themePreference === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => {
+                    setThemePreference(opt.value);
+                    setShowThemePicker(false);
+                  }}
+                  style={[
+                    styles.themeOption,
+                    selected && { backgroundColor: `${colors.primary}15` },
+                    { borderColor: selected ? colors.primary : colors.border },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons
+                    name={opt.icon}
+                    size={22}
+                    color={selected ? colors.primary : colors.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      { color: selected ? colors.primary : colors.text },
+                      selected && { fontWeight: '700' },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                  {selected && <MaterialIcons name="check-circle" size={22} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -396,4 +510,29 @@ const styles = StyleSheet.create({
   settingsRowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   settingsValue: { fontSize: FontSize.sm },
   version: { textAlign: 'center', fontSize: FontSize.xs, marginTop: 20 },
+
+  // Theme picker modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: BorderRadius.xl,
+    padding: 24,
+    gap: 12,
+  },
+  modalTitle: { fontSize: FontSize.lg, fontWeight: '700', marginBottom: 4 },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+  },
+  themeOptionText: { flex: 1, fontSize: FontSize.base, fontWeight: '500' },
 });
