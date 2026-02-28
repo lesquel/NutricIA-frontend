@@ -9,15 +9,18 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeStore, type ThemePreference } from '@/shared/store/theme.store';
-import { useUserSettings, useUpdateGoals, useUpdateDietaryPreferences } from '@/features/settings/hooks/use-settings';
+import { useUserSettings, useUpdateProfile, useUploadAvatar, useDeleteAvatar, useUpdateGoals, useUpdateDietaryPreferences, useDeleteAccount } from '@/features/settings/hooks/use-settings';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useLogout } from '@/features/auth/hooks/use-auth';
 
@@ -47,14 +50,21 @@ export default function SettingsScreen() {
 
   const user = useAuthStore((s) => s.user);
   const { data: settings, isLoading } = useUserSettings();
+  const updateProfile = useUpdateProfile();
+  const uploadAvatar = useUploadAvatar();
+  const deleteAvatar = useDeleteAvatar();
+  const deleteAccountMutation = useDeleteAccount();
   const updateGoals = useUpdateGoals();
   const updateDietaryPrefs = useUpdateDietaryPreferences();
   const logoutMutation = useLogout();
+  const clearAuth = useAuthStore((s) => s.clearAuth);
 
   const [calorieGoal, setCalorieGoal] = useState(user?.calorie_goal ?? 2100);
   const [waterGoal, setWaterGoal] = useState(user?.water_goal_ml ?? 2500);
   const [activeTags, setActiveTags] = useState<string[]>(user?.dietary_preferences ?? []);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState('');
 
   // Sync from server data when it arrives
   useEffect(() => {
@@ -86,8 +96,61 @@ export default function SettingsScreen() {
   };
 
   const displayName = settings?.name ?? user?.name ?? 'User';
+  const avatarUrl = settings?.avatar_url ?? user?.avatar_url ?? null;
   const initials = displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   const themeLabel = THEME_OPTIONS.find((o) => o.value === themePreference)?.label ?? 'System';
+
+  const handlePickAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    uploadAvatar.mutate(result.assets[0].uri);
+  };
+
+  const handleRemoveAvatar = () => {
+    Alert.alert(
+      'Remove Avatar',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => deleteAvatar.mutate(),
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This action is permanent and cannot be undone. All your data will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Forever',
+          style: 'destructive',
+          onPress: () => {
+            deleteAccountMutation.mutate(undefined, {
+              onSuccess: () => {
+                clearAuth();
+                router.replace('/login');
+              },
+              onError: () => {
+                Alert.alert('Error', 'Could not delete account. Please try again.');
+              },
+            });
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -106,19 +169,31 @@ export default function SettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <View style={styles.avatarWrapper}>
-            <View style={[styles.avatar, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            </View>
+          <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickAvatar} activeOpacity={0.8}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={[styles.avatar, { borderColor: colors.surface }]} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
             <View style={[styles.editBadge, { backgroundColor: colors.surface, borderColor: colors.white }]}>
-              <MaterialIcons name="edit" size={16} color={colors.primary} />
+              {uploadAvatar.isPending ? (
+                <ActivityIndicator size={12} color={colors.primary} />
+              ) : (
+                <MaterialIcons name="photo-camera" size={16} color={colors.primary} />
+              )}
             </View>
-          </View>
+          </TouchableOpacity>
           <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
           <Text style={[styles.profileRole, { color: colors.primary }]}>Mindful Eater</Text>
           <TouchableOpacity
             style={[styles.editProfileBtn, { borderColor: `${colors.accent}50` }]}
             activeOpacity={0.7}
+            onPress={() => {
+              setEditName(displayName === 'User' ? '' : displayName);
+              setShowEditProfile(true);
+            }}
           >
             <Text style={[styles.editProfileText, { color: colors.accent }]}>EDIT PROFILE</Text>
           </TouchableOpacity>
@@ -325,7 +400,7 @@ export default function SettingsScreen() {
 
           {/* Sign Out */}
           <TouchableOpacity
-            style={styles.settingsRow}
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
             activeOpacity={0.6}
             onPress={() => {
               Alert.alert(
@@ -359,6 +434,27 @@ export default function SettingsScreen() {
               )}
             </View>
           </TouchableOpacity>
+
+          {/* Delete Account */}
+          <TouchableOpacity
+            style={styles.settingsRow}
+            activeOpacity={0.6}
+            onPress={handleDeleteAccount}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: '#C6676618' }]}>
+                <MaterialIcons name="delete-forever" size={20} color="#C66766" />
+              </View>
+              <Text style={[styles.settingsLabel, { color: '#C66766' }]}>Delete Account</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              {deleteAccountMutation.isPending ? (
+                <ActivityIndicator size="small" color="#C66766" />
+              ) : (
+                <MaterialIcons name="chevron-right" size={20} color="#C66766" />
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Version */}
@@ -366,6 +462,109 @@ export default function SettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={showEditProfile} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowEditProfile(false)}>
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Profile</Text>
+
+            {/* Avatar section */}
+            <View style={styles.editAvatarSection}>
+              <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8}>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.editAvatar} />
+                ) : (
+                  <View style={[styles.editAvatar, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.editAvatarInitials}>{initials}</Text>
+                  </View>
+                )}
+                <View style={[styles.editAvatarOverlay]}>
+                  <MaterialIcons name="photo-camera" size={20} color="#FFF" />
+                </View>
+              </TouchableOpacity>
+              <View style={styles.editAvatarActions}>
+                <TouchableOpacity
+                  style={[styles.editAvatarBtn, { backgroundColor: `${colors.primary}15` }]}
+                  onPress={handlePickAvatar}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="upload" size={16} color={colors.primary} />
+                  <Text style={[styles.editAvatarBtnText, { color: colors.primary }]}>Upload</Text>
+                </TouchableOpacity>
+                {avatarUrl && (
+                  <TouchableOpacity
+                    style={[styles.editAvatarBtn, { backgroundColor: '#C6676615' }]}
+                    onPress={() => {
+                      setShowEditProfile(false);
+                      handleRemoveAvatar();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="delete-outline" size={16} color="#C66766" />
+                    <Text style={[styles.editAvatarBtnText, { color: '#C66766' }]}>Remove</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Name input */}
+            <Text style={[styles.editLabel, { color: colors.textMuted }]}>NAME</Text>
+            <TextInput
+              style={[
+                styles.editInput,
+                {
+                  color: colors.text,
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter your name"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (editName.trim()) {
+                  updateProfile.mutate(
+                    { name: editName.trim() },
+                    { onSuccess: () => setShowEditProfile(false) },
+                  );
+                }
+              }}
+            />
+
+            <View style={styles.editActions}>
+              <TouchableOpacity
+                style={[styles.editCancelBtn, { borderColor: colors.border }]}
+                onPress={() => setShowEditProfile(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.editCancelText, { color: colors.textMuted }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editSaveBtn, { backgroundColor: colors.primary, opacity: editName.trim() ? 1 : 0.5 }]}
+                onPress={() => {
+                  if (!editName.trim()) return;
+                  updateProfile.mutate(
+                    { name: editName.trim() },
+                    { onSuccess: () => setShowEditProfile(false) },
+                  );
+                }}
+                activeOpacity={0.7}
+                disabled={!editName.trim() || updateProfile.isPending}
+              >
+                {updateProfile.isPending ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.editSaveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Theme Picker Modal */}
       <Modal visible={showThemePicker} transparent animationType="fade">
@@ -578,4 +777,93 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   themeOptionText: { flex: 1, fontSize: FontSize.base, fontWeight: '500' },
+
+  // Edit Profile Modal
+  editAvatarSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  editAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  editAvatarInitials: {
+    fontSize: FontSize['2xl'],
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  editAvatarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 28,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  editAvatarActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  editAvatarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  editAvatarBtnText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+  },
+  editLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  editInput: {
+    fontSize: FontSize.base,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editCancelBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  editCancelText: {
+    fontSize: FontSize.base,
+    fontWeight: '600',
+  },
+  editSaveBtn: {
+    flex: 2,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+  },
+  editSaveText: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    color: '#FFF',
+  },
 });

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -91,6 +92,41 @@ export default function ScanScreen() {
       });
     } catch (error) {
       Alert.alert('Error', 'Failed to capture photo. Please try again.');
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: [1, 1],
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const uri = result.assets[0].uri;
+      setPhotoUri(uri);
+
+      // Auto-detect meal type by time of day
+      const hour = new Date().getHours();
+      if (hour < 11) setSelectedMealType('breakfast');
+      else if (hour < 15) setSelectedMealType('lunch');
+      else if (hour < 18) setSelectedMealType('snack');
+      else setSelectedMealType('dinner');
+
+      scanFood.mutate(uri, {
+        onSuccess: (scanResult) => {
+          setScanResult(scanResult);
+          setShowResults(true);
+        },
+        onError: () => {
+          Alert.alert('Scan Failed', 'Could not analyze the image. Please try again.');
+        },
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -189,16 +225,40 @@ export default function ScanScreen() {
 
       {/* Bottom controls */}
       <View style={styles.bottomControls}>
-        <TouchableOpacity
-          style={[styles.captureButton, scanFood.isPending && { opacity: 0.5 }]}
-          onPress={handleCapture}
-          activeOpacity={0.7}
-          disabled={scanFood.isPending}
-        >
-          <View style={styles.captureOuter}>
-            <View style={styles.captureInner} />
-          </View>
-        </TouchableOpacity>
+        <View style={styles.captureRow}>
+          {/* Gallery button */}
+          <TouchableOpacity
+            style={styles.sideButton}
+            onPress={handlePickImage}
+            activeOpacity={0.7}
+            disabled={scanFood.isPending}
+          >
+            <MaterialIcons name="photo-library" size={28} color="#FFF" />
+            <Text style={styles.sideButtonText}>Gallery</Text>
+          </TouchableOpacity>
+
+          {/* Capture button */}
+          <TouchableOpacity
+            style={[styles.captureButton, scanFood.isPending && { opacity: 0.5 }]}
+            onPress={handleCapture}
+            activeOpacity={0.7}
+            disabled={scanFood.isPending}
+          >
+            <View style={styles.captureOuter}>
+              <View style={styles.captureInner} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Flash toggle */}
+          <TouchableOpacity
+            style={styles.sideButton}
+            onPress={() => setFlash(!flash)}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name={flash ? 'flash-on' : 'flash-off'} size={28} color="#FFF" />
+            <Text style={styles.sideButtonText}>{flash ? 'On' : 'Off'}</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.manualEntry}>
           <MaterialIcons name="keyboard" size={18} color="rgba(255,255,255,0.8)" />
@@ -449,6 +509,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 28,
     zIndex: 10,
+  },
+  captureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 36,
+  },
+  sideButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    width: 56,
+  },
+  sideButtonText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: FontSize.xs,
+    fontWeight: '500',
   },
   captureButton: {
     width: 80,
