@@ -3,7 +3,13 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { loginWithOAuth, fetchCurrentUser, logout } from '../api/auth.service';
+import {
+  loginWithOAuth,
+  loginWithEmail,
+  registerWithEmail,
+  fetchCurrentUser,
+  logout,
+} from '../api/auth.service';
 import { useAuthStore } from '../store/auth.store';
 
 export function useCurrentUser() {
@@ -20,6 +26,34 @@ export function useCurrentUser() {
   });
 }
 
+// ── Email / Password ────────────────────────
+
+export function useRegister() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ email, password, name }: { email: string; password: string; name: string }) =>
+      registerWithEmail(email, password, name),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
+export function useEmailLogin() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ email, password }: { email: string; password: string }) =>
+      loginWithEmail(email, password),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
+// ── OAuth ───────────────────────────────────
+
 export function useOAuthLogin() {
   const qc = useQueryClient();
 
@@ -31,6 +65,8 @@ export function useOAuthLogin() {
     },
   });
 }
+
+// ── Logout ──────────────────────────────────
 
 export function useLogout() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
