@@ -5,8 +5,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { DateSelector } from '@/components/shared/date-selector';
-import { MealCard } from '@/components/shared/meal-card';
+import { DateSelector } from '@/shared/components/date-selector';
+import { MealCard } from '@/shared/components/meal-card';
 
 type MealSection = {
   title: string;
