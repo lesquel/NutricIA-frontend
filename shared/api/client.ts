@@ -4,7 +4,7 @@
  * Wraps `fetch` with baseURL, JWT injection, timeout, and error handling.
  */
 
-import * as SecureStore from 'expo-secure-store';
+import { storage } from '@/shared/lib/storage';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
@@ -23,7 +23,7 @@ export class ApiError extends Error {
 
 async function getToken(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync('auth_token');
+    return await storage.getItem('auth_token');
   } catch {
     return null;
   }
