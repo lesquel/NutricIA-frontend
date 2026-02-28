@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeStore, type ThemePreference } from '@/shared/store/theme.store';
 import { useUserSettings, useUpdateGoals, useUpdateDietaryPreferences } from '@/features/settings/hooks/use-settings';
 import { useAuthStore } from '@/features/auth/store/auth.store';
+import { useLogout } from '@/features/auth/hooks/use-auth';
 
 const DIET_TAGS = [
   'Vegan',
@@ -47,6 +49,7 @@ export default function SettingsScreen() {
   const { data: settings, isLoading } = useUserSettings();
   const updateGoals = useUpdateGoals();
   const updateDietaryPrefs = useUpdateDietaryPreferences();
+  const logoutMutation = useLogout();
 
   const [calorieGoal, setCalorieGoal] = useState(user?.calorie_goal ?? 2100);
   const [waterGoal, setWaterGoal] = useState(user?.water_goal_ml ?? 2500);
@@ -305,7 +308,10 @@ export default function SettingsScreen() {
           </TouchableOpacity>
 
           {/* Help */}
-          <TouchableOpacity style={styles.settingsRow} activeOpacity={0.6}>
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+            activeOpacity={0.6}
+          >
             <View style={styles.settingsRowLeft}>
               <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
                 <MaterialIcons name="help-outline" size={20} color={colors.primary} />
@@ -314,6 +320,43 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.settingsRowRight}>
               <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Sign Out */}
+          <TouchableOpacity
+            style={styles.settingsRow}
+            activeOpacity={0.6}
+            onPress={() => {
+              Alert.alert(
+                'Sign Out',
+                'Are you sure you want to sign out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: () =>
+                      logoutMutation.mutate(undefined, {
+                        onSuccess: () => router.replace('/login'),
+                      }),
+                  },
+                ],
+              );
+            }}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: '#C6676618' }]}>
+                <MaterialIcons name="logout" size={20} color="#C66766" />
+              </View>
+              <Text style={[styles.settingsLabel, { color: '#C66766' }]}>Sign Out</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              {logoutMutation.isPending ? (
+                <ActivityIndicator size="small" color="#C66766" />
+              ) : (
+                <MaterialIcons name="chevron-right" size={20} color="#C66766" />
+              )}
             </View>
           </TouchableOpacity>
         </View>

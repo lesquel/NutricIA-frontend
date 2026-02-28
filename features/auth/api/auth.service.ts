@@ -5,6 +5,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { apiClient } from '@/shared/api/client';
 import type { TokenResponse, UserProfile } from '@/shared/types/api';
+import { useAuthStore } from '../store/auth.store';
 
 // ── Email / Password ────────────────────────
 
@@ -20,6 +21,7 @@ export async function registerWithEmail(
   );
 
   await SecureStore.setItemAsync('auth_token', data.access_token);
+  useAuthStore.getState().setUser(data.user);
   return data;
 }
 
@@ -34,6 +36,7 @@ export async function loginWithEmail(
   );
 
   await SecureStore.setItemAsync('auth_token', data.access_token);
+  useAuthStore.getState().setUser(data.user);
   return data;
 }
 
@@ -49,8 +52,8 @@ export async function loginWithOAuth(
     { skipAuth: true },
   );
 
-  // Persist JWT
   await SecureStore.setItemAsync('auth_token', data.access_token);
+  useAuthStore.getState().setUser(data.user);
   return data;
 }
 
