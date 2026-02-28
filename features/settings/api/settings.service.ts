@@ -3,6 +3,7 @@
  */
 
 import { apiClient } from '@/shared/api/client';
+import { appendFileToFormData } from '@/shared/lib/form-data';
 import type { UserProfile } from '@/shared/types/api';
 
 export async function fetchUserSettings(): Promise<UserProfile> {
@@ -18,11 +19,7 @@ export async function updateProfile(data: {
 
 export async function uploadAvatar(imageUri: string): Promise<UserProfile> {
   const formData = new FormData();
-  formData.append('file', {
-    uri: imageUri,
-    name: 'avatar.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
+  await appendFileToFormData(formData, 'file', imageUri, 'avatar.jpg', 'image/jpeg');
 
   return apiClient.upload<UserProfile>('/users/me/avatar', formData);
 }

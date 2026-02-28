@@ -3,15 +3,12 @@
  */
 
 import { apiClient } from '@/shared/api/client';
+import { appendFileToFormData } from '@/shared/lib/form-data';
 import type { ScanResult, MealResponse, MealType } from '@/shared/types/api';
 
 export async function scanFood(imageUri: string): Promise<ScanResult> {
   const formData = new FormData();
-  formData.append('file', {
-    uri: imageUri,
-    name: 'food.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
+  await appendFileToFormData(formData, 'file', imageUri, 'food.jpg', 'image/jpeg');
 
   return apiClient.upload<ScanResult>('/meals/scan', formData, {
     timeout: 45_000, // AI analysis can be slow
