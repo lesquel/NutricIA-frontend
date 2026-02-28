@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useScanFood, useSaveMeal } from '@/features/scanner/hooks/use-scan-food';
+import { ApiError } from '@/shared/api/client';
 import type { ScanResult, MealType } from '@/shared/types/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -28,6 +29,14 @@ const MEAL_TYPE_OPTIONS: { value: MealType; label: string; icon: keyof typeof Ma
   { value: 'snack', label: 'Snack', icon: 'cookie' },
   { value: 'dinner', label: 'Dinner', icon: 'nightlight-round' },
 ];
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.body && typeof error.body === 'object') {
+    const detail = (error.body as { detail?: unknown }).detail;
+    if (typeof detail === 'string' && detail.trim()) return detail;
+  }
+  return fallback;
+}
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -86,8 +95,11 @@ export default function ScanScreen() {
           setScanResult(result);
           setShowResults(true);
         },
-        onError: () => {
-          Alert.alert('Scan Failed', 'Could not analyze the image. Please try again.');
+        onError: (error) => {
+          Alert.alert(
+            'Scan Failed',
+            getApiErrorMessage(error, 'Could not analyze the image. Please try again.'),
+          );
         },
       });
     } catch (error) {
@@ -121,8 +133,11 @@ export default function ScanScreen() {
           setScanResult(scanResult);
           setShowResults(true);
         },
-        onError: () => {
-          Alert.alert('Scan Failed', 'Could not analyze the image. Please try again.');
+        onError: (error) => {
+          Alert.alert(
+            'Scan Failed',
+            getApiErrorMessage(error, 'Could not analyze the image. Please try again.'),
+          );
         },
       });
     } catch (error) {
