@@ -1,67 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DateSelector } from '@/shared/components/date-selector';
 import { MealCard } from '@/shared/components/meal-card';
-
-type MealSection = {
-  title: string;
-  icon: keyof typeof MaterialIcons.glyphMap;
-  totalKcal: number;
-  meals: Array<{
-    id: string;
-    name: string;
-    mealType: string;
-    time: string;
-    calories: number;
-    tag?: string;
-  }>;
-};
-
-const MOCK_SECTIONS: MealSection[] = [
-  {
-    title: 'Breakfast',
-    icon: 'wb-sunny',
-    totalKcal: 355,
-    meals: [
-      { id: '1', name: 'Avocado Toast', mealType: 'Breakfast', time: '8:30 AM', calories: 350, tag: 'High Fiber' },
-      { id: '2', name: 'Black Coffee', mealType: 'Breakfast', time: '8:35 AM', calories: 5 },
-    ],
-  },
-  {
-    title: 'Lunch',
-    icon: 'light-mode',
-    totalKcal: 0,
-    meals: [],
-  },
-  {
-    title: 'Snacks',
-    icon: 'cookie',
-    totalKcal: 150,
-    meals: [
-      { id: '3', name: 'Raw Almonds', mealType: 'Snack', time: '4:00 PM', calories: 150, tag: 'Protein' },
-    ],
-  },
-  {
-    title: 'Dinner',
-    icon: 'nightlight-round',
-    totalKcal: 620,
-    meals: [
-      { id: '4', name: 'Grilled Salmon', mealType: 'Dinner', time: '7:00 PM', calories: 620, tag: 'Omega-3' },
-    ],
-  },
-];
+import { useJournalMeals } from '@/features/journal/hooks/use-journal';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 export default function JournalScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const router = useRouter();
 
-  const totalDayCalories = MOCK_SECTIONS.reduce((sum, s) => sum + s.totalKcal, 0);
-  const calorieGoal = 2200;
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading } = useJournalMeals();
+
+  const sections = data?.sections ?? [];
+  const totalDayCalories = data?.totalCalories ?? 0;
+  const calorieGoal = user?.calorie_goal ?? 2200;
   const progress = Math.min(totalDayCalories / calorieGoal, 1);
 
   return (
@@ -77,35 +37,40 @@ export default function JournalScreen() {
       <DateSelector />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {MOCK_SECTIONS.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <MaterialIcons name={section.icon} size={18} color={colors.textMuted} />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 40 }} />
+        ) : (
+          sections.map((section) => (
+            <View key={section.title} style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <MaterialIcons name={section.icon as keyof typeof MaterialIcons.glyphMap} size={18} color={colors.textMuted} />
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
+                </View>
+                {section.totalKcal > 0 && (
+                  <Text style={[styles.sectionKcal, { color: colors.textMuted }]}>
+                    {section.totalKcal} kcal
+                  </Text>
+                )}
               </View>
-              {section.totalKcal > 0 && (
-                <Text style={[styles.sectionKcal, { color: colors.textMuted }]}>
-                  {section.totalKcal} kcal
-                </Text>
+
+              {section.meals.length > 0 ? (
+                section.meals.map((meal) => <MealCard key={meal.id} meal={meal} />)
+              ) : (
+                <TouchableOpacity
+                  style={[styles.emptyCard, { borderColor: colors.border }]}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/scan')}
+                >
+                  <MaterialIcons name="add" size={24} color={colors.textMuted} />
+                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                    Add {section.title}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
-
-            {section.meals.length > 0 ? (
-              section.meals.map((meal) => <MealCard key={meal.id} meal={meal} />)
-            ) : (
-              <TouchableOpacity
-                style={[styles.emptyCard, { borderColor: colors.border }]}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="add" size={24} color={colors.textMuted} />
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                  Add {section.title}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+          ))
+        )}
 
         <View style={{ height: 180 }} />
       </ScrollView>
@@ -121,7 +86,7 @@ export default function JournalScreen() {
                 <Text style={styles.totalGoal}>/ {calorieGoal.toLocaleString()} kcal</Text>
               </Text>
             </View>
-            <TouchableOpacity style={styles.totalAddBtn}>
+            <TouchableOpacity style={styles.totalAddBtn} onPress={() => router.push('/scan')}>
               <MaterialIcons name="add" size={22} color="#FFF" />
             </TouchableOpacity>
           </View>

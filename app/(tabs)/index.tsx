@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -10,20 +10,20 @@ import { DateSelector } from '@/shared/components/date-selector';
 import { MealCard } from '@/shared/components/meal-card';
 import { MacroPill } from '@/shared/components/macro-pill';
 import { NourishmentRing } from '@/features/dashboard/components/nourishment-ring';
-
-const MOCK_MEALS = [
-  { id: '1', name: 'Avocado Toast', mealType: 'Breakfast', time: '8:30 AM', calories: 350 },
-  { id: '2', name: 'Green Bowl', mealType: 'Lunch', time: '12:45 PM', calories: 420 },
-  { id: '3', name: 'Raw Almonds', mealType: 'Snack', time: '4:00 PM', calories: 150 },
-];
+import { useDailySummary, useDailyMeals } from '@/features/dashboard/hooks/use-dashboard';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 export default function DashboardScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
 
-  const totalCalories = 1240;
-  const calorieGoal = 2200;
+  const user = useAuthStore((s) => s.user);
+  const { data: summary, isLoading: summaryLoading } = useDailySummary();
+  const { data: meals, isLoading: mealsLoading } = useDailyMeals();
+
+  const totalCalories = summary?.total_calories ?? 0;
+  const calorieGoal = user?.calorie_goal ?? 2200;
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -32,12 +32,15 @@ export default function DashboardScreen() {
     return 'Good Evening';
   }, []);
 
+  const displayName = user?.name?.split(' ')[0] ?? 'There';
+  const isLoading = summaryLoading || mealsLoading;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { color: colors.textMuted }]}>{greeting}</Text>
-          <Text style={[styles.userName, { color: colors.text }]}>Alex</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{displayName}</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/settings')}
@@ -56,22 +59,36 @@ export default function DashboardScreen() {
 
         {/* Macro Pills */}
         <View style={styles.macrosGrid}>
-          <MacroPill icon="egg-alt" label="Protein" value="60g" />
-          <MacroPill icon="grain" label="Carbs" value="120g" />
-          <MacroPill icon="water-drop" label="Fats" value="45g" />
+          <MacroPill icon="egg-alt" label="Protein" value={`${summary?.total_protein_g ?? 0}g`} />
+          <MacroPill icon="grain" label="Carbs" value={`${summary?.total_carbs_g ?? 0}g`} />
+          <MacroPill icon="water-drop" label="Fats" value={`${summary?.total_fat_g ?? 0}g`} />
         </View>
 
         {/* Today's Nourishment */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Nourishment</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/journal')}>
             <Text style={[styles.viewAll, { color: colors.primary }]}>View All</Text>
           </TouchableOpacity>
         </View>
 
-        {MOCK_MEALS.map((meal) => (
-          <MealCard key={meal.id} meal={meal} />
-        ))}
+        {isLoading ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 24 }} />
+        ) : meals && meals.length > 0 ? (
+          meals.slice(0, 5).map((meal) => (
+            <MealCard key={meal.id} meal={meal} />
+          ))
+        ) : (
+          <TouchableOpacity
+            onPress={() => router.push('/scan')}
+            style={[styles.emptyState, { borderColor: colors.border }]}
+          >
+            <MaterialIcons name="add-circle-outline" size={32} color={colors.textMuted} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              No meals logged yet — tap to scan your first meal
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -138,6 +155,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: FontSize.xl, fontWeight: '700' },
   viewAll: { fontSize: FontSize.sm, fontWeight: '500' },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 120,
+    marginHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  emptyText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
   fab: {
     position: 'absolute',
     bottom: 100,

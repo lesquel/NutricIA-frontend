@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,60 +6,29 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useHabits, useCheckInHabit, useWaterLog, useLogWater } from '@/features/garden/hooks/use-garden';
+import type { HabitResponse, PlantState } from '@/shared/types/api';
 
 const TOTAL_CUPS = 8;
 
-type PlantState = 'healthy' | 'growing' | 'wilted';
-
-type Plant = {
-  id: string;
-  name: string;
-  species: string;
-  state: PlantState;
-  level: number;
-  progress: number; // 0-100
-  streak: number;
-  emoji: string;
+// Map plant_type → emoji
+const PLANT_EMOJI: Record<string, string> = {
+  fern: '🌿',
+  palm: '🌱',
+  mint: '🥀',
+  cactus: '🌵',
+  flower: '🌸',
+  tree: '🌳',
+  default: '🌱',
 };
-
-const MOCK_PLANTS: Plant[] = [
-  {
-    id: '1',
-    name: 'Calorie Balance',
-    species: 'Consistency Fern',
-    state: 'healthy',
-    level: 3,
-    progress: 85,
-    streak: 5,
-    emoji: '🌿',
-  },
-  {
-    id: '2',
-    name: 'Protein Goal',
-    species: 'Protein Palm',
-    state: 'growing',
-    level: 1,
-    progress: 40,
-    streak: 2,
-    emoji: '🌱',
-  },
-  {
-    id: '3',
-    name: 'No Sugar',
-    species: 'Mindful Mint',
-    state: 'wilted',
-    level: 2,
-    progress: 0,
-    streak: 0,
-    emoji: '🥀',
-  },
-];
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 24 * 2 - 12) / 2;
@@ -67,10 +36,17 @@ const CARD_WIDTH = (width - 24 * 2 - 12) / 2;
 export default function GardenScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const [cups, setCups] = useState(5);
+
+  const { data: habits, isLoading: habitsLoading } = useHabits();
+  const { data: waterLog, isLoading: waterLoading } = useWaterLog();
+  const logWater = useLogWater();
+  const checkInHabit = useCheckInHabit();
+
+  const cups = waterLog?.cups ?? 0;
 
   const toggleCup = (index: number) => {
-    setCups(index + 1 === cups ? index : index + 1);
+    const newCups = index + 1 === cups ? index : index + 1;
+    logWater.mutate(newCups);
   };
 
   return (
@@ -101,34 +77,38 @@ export default function GardenScreen() {
             </Text>
           </View>
 
-          <View style={styles.cupsRow}>
-            {Array.from({ length: TOTAL_CUPS }).map((_, i) => {
-              const filled = i < cups;
-              return (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => toggleCup(i)}
-                  style={[
-                    styles.cupBtn,
-                    {
-                      backgroundColor: filled
-                        ? `${colors.waterBlue}18`
-                        : colorScheme === 'dark'
-                          ? colors.border
-                          : '#F0F0EC',
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons
-                    name="water-drop"
-                    size={20}
-                    color={filled ? colors.waterBlue : colors.waterEmpty}
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {waterLoading ? (
+            <ActivityIndicator size="small" color={colors.waterBlue} />
+          ) : (
+            <View style={styles.cupsRow}>
+              {Array.from({ length: TOTAL_CUPS }).map((_, i) => {
+                const filled = i < cups;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => toggleCup(i)}
+                    style={[
+                      styles.cupBtn,
+                      {
+                        backgroundColor: filled
+                          ? `${colors.waterBlue}18`
+                          : colorScheme === 'dark'
+                            ? colors.border
+                            : '#F0F0EC',
+                      },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons
+                      name="water-drop"
+                      size={20}
+                      color={filled ? colors.waterBlue : colors.waterEmpty}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Plants Header */}
@@ -140,27 +120,38 @@ export default function GardenScreen() {
         </View>
 
         {/* Plant Grid */}
-        <View style={styles.plantsGrid}>
-          {MOCK_PLANTS.map((plant) => (
-            <PlantCard key={plant.id} plant={plant} colors={colors} colorScheme={colorScheme} />
-          ))}
-          {/* Add New Habit Card */}
-          <TouchableOpacity
-            style={[
-              styles.addCard,
-              { borderColor: colors.border, backgroundColor: colors.background },
-            ]}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[styles.addIconCircle, { backgroundColor: colors.surface }]}
+        {habitsLoading ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 20 }} />
+        ) : (
+          <View style={styles.plantsGrid}>
+            {(habits ?? []).map((habit) => (
+              <PlantCard
+                key={habit.id}
+                habit={habit}
+                colors={colors}
+                colorScheme={colorScheme}
+                onCheckIn={() => checkInHabit.mutate(habit.id)}
+              />
+            ))}
+            {/* Add New Habit Card */}
+            <TouchableOpacity
+              style={[
+                styles.addCard,
+                { borderColor: colors.border, backgroundColor: colors.background },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => Alert.alert('Coming Soon', 'Creating new habits will be available in the next update!')}
             >
-              <MaterialIcons name="add" size={28} color={colors.textMuted} />
-            </View>
-            <Text style={[styles.addTitle, { color: colors.textMuted }]}>Plant New Seed</Text>
-            <Text style={[styles.addSub, { color: colors.textMuted }]}>Start a new habit</Text>
-          </TouchableOpacity>
-        </View>
+              <View
+                style={[styles.addIconCircle, { backgroundColor: colors.surface }]}
+              >
+                <MaterialIcons name="add" size={28} color={colors.textMuted} />
+              </View>
+              <Text style={[styles.addTitle, { color: colors.textMuted }]}>Plant New Seed</Text>
+              <Text style={[styles.addSub, { color: colors.textMuted }]}>Start a new habit</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -169,15 +160,18 @@ export default function GardenScreen() {
 }
 
 function PlantCard({
-  plant,
+  habit,
   colors,
   colorScheme,
+  onCheckIn,
 }: {
-  plant: Plant;
+  habit: HabitResponse;
   colors: typeof Colors[keyof typeof Colors];
   colorScheme: 'light' | 'dark';
+  onCheckIn: () => void;
 }) {
-  const isWilted = plant.state === 'wilted';
+  const isWilted = habit.plant_state === 'wilted';
+  const emoji = PLANT_EMOJI[habit.plant_type] ?? PLANT_EMOJI.default;
 
   return (
     <View
@@ -192,19 +186,19 @@ function PlantCard({
       ]}
     >
       {/* Streak / State badge */}
-      {plant.state === 'healthy' && (
+      {habit.plant_state === 'healthy' && (
         <View style={[styles.badge, { backgroundColor: '#FFF3E0' }]}>
           <MaterialIcons name="local-fire-department" size={14} color={colors.accent} />
-          <Text style={[styles.badgeText, { color: colors.accent }]}>{plant.streak} Days</Text>
+          <Text style={[styles.badgeText, { color: colors.accent }]}>{habit.streak} Days</Text>
         </View>
       )}
-      {plant.state === 'growing' && (
+      {habit.plant_state === 'growing' && (
         <View style={[styles.badge, { backgroundColor: '#E8F5E9' }]}>
           <MaterialIcons name="eco" size={14} color={colors.primary} />
-          <Text style={[styles.badgeText, { color: colors.primary }]}>{plant.streak} Days</Text>
+          <Text style={[styles.badgeText, { color: colors.primary }]}>{habit.streak} Days</Text>
         </View>
       )}
-      {plant.state === 'wilted' && (
+      {habit.plant_state === 'wilted' && (
         <View style={[styles.badge, { backgroundColor: '#FFEBEE' }]}>
           <MaterialIcons name="warning" size={14} color={colors.error} />
           <Text style={[styles.badgeText, { color: colors.error }]}>Dry</Text>
@@ -213,19 +207,19 @@ function PlantCard({
 
       {/* Plant Emoji */}
       <View style={[styles.plantEmojiContainer, isWilted && { opacity: 0.6 }]}>
-        <Text style={styles.plantEmoji}>{plant.emoji}</Text>
+        <Text style={styles.plantEmoji}>{emoji}</Text>
       </View>
 
       {/* Info */}
       <View style={styles.plantInfo}>
         <Text style={[styles.plantName, { color: colors.text }]} numberOfLines={1}>
-          {plant.name}
+          {habit.name}
         </Text>
         {isWilted ? (
           <Text style={[styles.plantSpecies, { color: colors.error }]}>Needs Water</Text>
         ) : (
           <Text style={[styles.plantSpecies, { color: colors.textMuted }]}>
-            {plant.species}
+            {habit.description || habit.plant_type}
           </Text>
         )}
       </View>
@@ -235,29 +229,32 @@ function PlantCard({
         <TouchableOpacity
           style={[styles.reviveBtn, { backgroundColor: `${colors.waterBlue}15` }]}
           activeOpacity={0.7}
+          onPress={onCheckIn}
         >
           <MaterialIcons name="water-drop" size={14} color={colors.waterBlue} />
           <Text style={[styles.reviveText, { color: colors.waterBlue }]}>Revive</Text>
         </TouchableOpacity>
       ) : (
-        <View style={styles.progressSection}>
-          <View style={styles.progressLabelRow}>
-            <Text style={[styles.progressLabelSmall, { color: colors.textMuted }]}>
-              Lvl {plant.level}
-            </Text>
-            <Text style={[styles.progressLabelSmall, { color: colors.textMuted }]}>
-              {plant.progress}%
-            </Text>
+        <TouchableOpacity onPress={!habit.is_checked_today ? onCheckIn : undefined} activeOpacity={habit.is_checked_today ? 1 : 0.7}>
+          <View style={styles.progressSection}>
+            <View style={styles.progressLabelRow}>
+              <Text style={[styles.progressLabelSmall, { color: colors.textMuted }]}>
+                Lvl {habit.level}
+              </Text>
+              <Text style={[styles.progressLabelSmall, { color: habit.is_checked_today ? colors.primary : colors.textMuted }]}>
+                {habit.is_checked_today ? '✓ Done' : `${habit.progress}%`}
+              </Text>
+            </View>
+            <View style={[styles.progressTrack, { backgroundColor: colorScheme === 'dark' ? colors.border : '#ECECEC' }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${habit.progress}%`, backgroundColor: colors.primary },
+                ]}
+              />
+            </View>
           </View>
-          <View style={[styles.progressTrack, { backgroundColor: colorScheme === 'dark' ? colors.border : '#ECECEC' }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${plant.progress}%`, backgroundColor: colors.primary },
-              ]}
-            />
-          </View>
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );
