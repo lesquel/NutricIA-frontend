@@ -49,9 +49,11 @@ export function useWaterLog() {
 
 export function useLogWater() {
   const qc = useQueryClient();
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const dateStr = formatDateParam(selectedDate);
 
   return useMutation({
-    mutationFn: (cups: number) => logWater(cups),
+    mutationFn: (cups: number) => logWater(cups, dateStr),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['water'] }),
   });
 }

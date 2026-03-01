@@ -23,9 +23,12 @@ export async function checkInHabit(habitId: string): Promise<HabitResponse> {
 }
 
 export async function fetchWaterLog(date: string): Promise<WaterLogResponse> {
-  return apiClient.get<WaterLogResponse>(`/habits/water?date=${date}`);
+  return apiClient.get<WaterLogResponse>(`/habits/water?target_date=${date}`);
 }
 
-export async function logWater(cups: number): Promise<WaterLogResponse> {
-  return apiClient.post<WaterLogResponse>('/habits/water', { cups });
+export async function logWater(cups: number, targetDate: string): Promise<WaterLogResponse> {
+  return apiClient.post<WaterLogResponse>('/habits/water', {
+    cups,
+    target_date: targetDate,
+  });
 }

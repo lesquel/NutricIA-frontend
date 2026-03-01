@@ -23,30 +23,37 @@ export type UserProfile = {
 export type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner';
 
 export type ScanResult = {
-  food_name: string;
-  description: string;
-  estimated_calories: number;
+  name: string;
+  ingredients: string[];
+  calories: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
-  fiber_g: number;
   confidence: number;
   tags: string[];
 };
 
 export type MealResponse = {
   id: string;
-  food_name: string;
-  description: string;
+  name: string;
   calories: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
-  fiber_g: number;
   meal_type: MealType;
+  confidence_score: number;
   tags: string[];
   image_url: string | null;
+  logged_at: string;
   created_at: string;
+};
+
+export type MealListResponse = {
+  meals: MealResponse[];
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
 };
 
 /* ─── Habits ─── */
@@ -68,7 +75,7 @@ export type HabitResponse = {
 
 export type WaterLogResponse = {
   cups: number;
-  goal_ml: number;
+  goal_cups: number;
   date: string;
 };
 

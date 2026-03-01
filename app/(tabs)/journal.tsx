@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,28 +8,72 @@ import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DateSelector } from '@/shared/components/date-selector';
 import { MealCard } from '@/shared/components/meal-card';
-import { useJournalMeals } from '@/features/journal/hooks/use-journal';
+import { useJournalMeals, useMealCalendar } from '@/features/journal/hooks/use-journal';
 import { useAuthStore } from '@/features/auth/store/auth.store';
+import { useDateStore } from '@/shared/store/date.store';
+import type { MealResponse } from '@/shared/types/api';
+
+function toMonthKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function isDisplayableImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  if (lower.startsWith('blob:') || lower.startsWith('data:')) return false;
+  return true;
+}
 
 export default function JournalScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const setSelectedDate = useDateStore((s) => s.setSelectedDate);
 
   const user = useAuthStore((s) => s.user);
   const { data, isLoading } = useJournalMeals();
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [detailMeal, setDetailMeal] = useState<MealResponse | null>(null);
+  const [monthCursor, setMonthCursor] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+
+  const monthKey = toMonthKey(monthCursor);
+  const { data: calendarData } = useMealCalendar(monthKey);
+  const enabledDays = useMemo(() => new Set(calendarData?.registered_dates ?? []), [calendarData]);
+
+  const daysInMonth = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0).getDate();
+  const firstWeekDay = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1).getDay();
 
   const sections = data?.sections ?? [];
   const totalDayCalories = data?.totalCalories ?? 0;
   const calorieGoal = user?.calorie_goal ?? 2200;
   const progress = Math.min(totalDayCalories / calorieGoal, 1);
 
+  const mealDetail = detailMeal
+    ? {
+        totalMacros: detailMeal.protein_g + detailMeal.carbs_g + detailMeal.fat_g,
+      }
+    : null;
+
+  const mealPercentages = mealDetail && mealDetail.totalMacros > 0
+    ? {
+        protein: Math.round((detailMeal!.protein_g / mealDetail.totalMacros) * 100),
+        carbs: Math.round((detailMeal!.carbs_g / mealDetail.totalMacros) * 100),
+        fat: Math.round((detailMeal!.fat_g / mealDetail.totalMacros) * 100),
+      }
+    : { protein: 0, carbs: 0, fat: 0 };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Journal</Text>
-        <TouchableOpacity style={[styles.calendarBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.calendarBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => setCalendarOpen(true)}
+        >
           <MaterialIcons name="calendar-today" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -55,7 +99,9 @@ export default function JournalScreen() {
               </View>
 
               {section.meals.length > 0 ? (
-                section.meals.map((meal) => <MealCard key={meal.id} meal={meal} />)
+                section.meals.map((meal) => (
+                  <MealCard key={meal.id} meal={meal} onPress={() => setDetailMeal(meal)} />
+                ))
               ) : (
                 <TouchableOpacity
                   style={[styles.emptyCard, { borderColor: colors.border }]}
@@ -95,6 +141,183 @@ export default function JournalScreen() {
           </View>
         </View>
       </View>
+
+      <Modal visible={calendarOpen} transparent animationType="fade" onRequestClose={() => setCalendarOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.calendarModal, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity
+                style={[styles.monthNavBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
+                onPress={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
+              >
+                <MaterialIcons name="chevron-left" size={20} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.calendarTitle, { color: colors.text }]}> 
+                {monthCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </Text>
+              <TouchableOpacity
+                style={[styles.monthNavBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
+                onPress={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
+              >
+                <MaterialIcons name="chevron-right" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.calendarSummary, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <View style={styles.calendarSummaryItem}>
+                <Text style={[styles.calendarSummaryLabel, { color: colors.textMuted }]}>Days with meals</Text>
+                <Text style={[styles.calendarSummaryValue, { color: colors.text }]}>{enabledDays.size}</Text>
+              </View>
+              <View style={styles.calendarSummaryDivider} />
+              <View style={styles.calendarSummaryItem}>
+                <Text style={[styles.calendarSummaryLabel, { color: colors.textMuted }]}>Selected date</Text>
+                <Text style={[styles.calendarSummaryValue, { color: colors.text }]}>
+                  {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.weekHeaderRow}>
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                <Text key={day} style={[styles.weekHeaderText, { color: colors.textMuted }]}>{day}</Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {Array.from({ length: firstWeekDay }).map((_, idx) => (
+                <View key={`pad-${idx}`} style={styles.dayCell} />
+              ))}
+
+              {Array.from({ length: daysInMonth }).map((_, idx) => {
+                const dayNumber = idx + 1;
+                const y = monthCursor.getFullYear();
+                const m = String(monthCursor.getMonth() + 1).padStart(2, '0');
+                const d = String(dayNumber).padStart(2, '0');
+                const dateKey = `${y}-${m}-${d}`;
+                const enabled = enabledDays.has(dateKey);
+                const isSelected =
+                  selectedDate.getFullYear() === y &&
+                  selectedDate.getMonth() === monthCursor.getMonth() &&
+                  selectedDate.getDate() === dayNumber;
+
+                return (
+                  <TouchableOpacity
+                    key={dateKey}
+                    disabled={!enabled}
+                    style={[
+                      styles.dayCell,
+                      styles.dayButton,
+                      {
+                        backgroundColor: isSelected ? colors.primary : colors.background,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        opacity: enabled ? 1 : 0.35,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (!enabled) return;
+                      setSelectedDate(new Date(y, monthCursor.getMonth(), dayNumber));
+                      setCalendarOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dayText,
+                        { color: isSelected ? '#FFF' : colors.text },
+                      ]}
+                    >
+                      {dayNumber}
+                    </Text>
+                    {enabled && !isSelected && (
+                      <View style={[styles.dayDot, { backgroundColor: colors.primary }]} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.calendarHint, { color: colors.textMuted }]}> 
+              Days without meals are disabled.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.closeBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setCalendarOpen(false)}
+            >
+              <Text style={styles.closeBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!detailMeal} transparent animationType="slide" onRequestClose={() => setDetailMeal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.detailModal, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <View style={styles.detailHeader}>
+              <Text style={[styles.detailTitle, { color: colors.text }]}>Meal Details</Text>
+              <TouchableOpacity onPress={() => setDetailMeal(null)} style={[styles.detailClose, { backgroundColor: colors.background }]}> 
+                <MaterialIcons name="close" size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
+              {isDisplayableImageUrl(detailMeal?.image_url) ? (
+                <Image source={{ uri: detailMeal.image_url }} style={styles.detailImage} />
+              ) : (
+                <View style={[styles.detailImagePlaceholder, { backgroundColor: colors.background }]}> 
+                  <MaterialIcons name="restaurant" size={36} color={colors.textMuted} />
+                </View>
+              )}
+
+              <Text style={[styles.detailMealName, { color: colors.text }]}>{detailMeal?.name}</Text>
+              <Text style={[styles.detailMealMeta, { color: colors.textMuted }]}> 
+                {detailMeal?.meal_type} • {detailMeal ? new Date(detailMeal.logged_at).toLocaleString() : ''}
+              </Text>
+
+              {!!detailMeal?.tags?.length && (
+                <View style={styles.tagRow}>
+                  {detailMeal.tags.slice(0, 3).map((tag) => (
+                    <View key={tag} style={[styles.detailTag, { backgroundColor: colors.primary + '15' }]}>
+                      <Text style={[styles.detailTagText, { color: colors.primary }]}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={[styles.detailStatsCard, { backgroundColor: colors.background, borderColor: colors.border }]}> 
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Calories</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.calories ?? 0} kcal</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Protein</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.protein_g ?? 0}g ({mealPercentages.protein}%)</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Carbs</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.carbs_g ?? 0}g ({mealPercentages.carbs}%)</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Fat</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.fat_g ?? 0}g ({mealPercentages.fat}%)</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>AI Confidence</Text>
+                  <Text style={[styles.detailValue, { color: colors.primary }]}> 
+                    {Math.round((detailMeal?.confidence_score ?? 0) * 100)}%
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.closeBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
+                onPress={() => setDetailMeal(null)}
+              >
+                <Text style={styles.closeBtnText}>Done</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -181,4 +404,135 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary,
     borderRadius: 3,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  calendarModal: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    maxWidth: 430,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  calendarSummary: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  calendarSummaryItem: { flex: 1, gap: 3 },
+  calendarSummaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(138,148,143,0.35)', marginHorizontal: 10 },
+  calendarSummaryLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  calendarSummaryValue: { fontSize: FontSize.base, fontWeight: '700' },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  monthNavBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarTitle: { fontSize: FontSize.base, fontWeight: '700' },
+  weekHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  weekHeaderText: { width: 34, textAlign: 'center', fontSize: FontSize.xs, fontWeight: '600' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  dayCell: { width: 34, height: 34 },
+  dayButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayText: { fontSize: FontSize.sm, fontWeight: '600' },
+  dayDot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  calendarHint: { marginTop: 12, fontSize: FontSize.xs },
+  closeBtn: {
+    marginTop: 12,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  closeBtnText: { color: '#FFF', fontSize: FontSize.sm, fontWeight: '700' },
+  detailModal: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    maxHeight: '86%',
+  },
+  detailContent: { paddingBottom: 4 },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  detailClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailImage: { width: '100%', height: 180, borderRadius: 12, marginBottom: 10 },
+  detailImagePlaceholder: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailMealName: { fontSize: FontSize.xl, fontWeight: '700' },
+  detailMealMeta: { fontSize: FontSize.sm, marginBottom: 12 },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  detailTag: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  detailTagText: { fontSize: FontSize.xs, fontWeight: '700' },
+  detailStatsCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  detailLabel: { fontSize: FontSize.sm },
+  detailValue: { fontSize: FontSize.sm, fontWeight: '700' },
 });

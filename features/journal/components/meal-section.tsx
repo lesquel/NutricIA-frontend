@@ -40,9 +40,9 @@ export function MealSection({ title, icon, meals, totalKcal, onAddPress }: Props
             key={meal.id}
             meal={{
               id: meal.id,
-              name: meal.food_name,
+              name: meal.name,
               mealType: meal.meal_type,
-              time: new Date(meal.created_at).toLocaleTimeString([], {
+              time: new Date(meal.logged_at).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
               }),

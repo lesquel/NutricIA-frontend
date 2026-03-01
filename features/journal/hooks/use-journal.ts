@@ -4,7 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDateStore, formatDateParam } from '@/shared/store/date.store';
-import { fetchMealsByDate, deleteMeal } from '../api/journal.service';
+import { fetchMealsByDate, deleteMeal, fetchMealCalendar } from '../api/journal.service';
 import type { MealResponse, MealType } from '@/shared/types/api';
 
 export type MealSection = {
@@ -43,8 +43,8 @@ export function useJournalMeals() {
     queryKey: ['meals', 'daily', dateStr],
     queryFn: () => fetchMealsByDate(dateStr),
     select: (data) => ({
-      sections: groupMealsIntoSections(data),
-      totalCalories: data.reduce((s, m) => s + m.calories, 0),
+      sections: groupMealsIntoSections(data.meals),
+      totalCalories: data.total_calories,
     }),
   });
 }
@@ -58,5 +58,12 @@ export function useDeleteMeal() {
       qc.invalidateQueries({ queryKey: ['meals'] });
       qc.invalidateQueries({ queryKey: ['analytics'] });
     },
+  });
+}
+
+export function useMealCalendar(month: string) {
+  return useQuery({
+    queryKey: ['meals', 'calendar', month],
+    queryFn: () => fetchMealCalendar(month),
   });
 }
