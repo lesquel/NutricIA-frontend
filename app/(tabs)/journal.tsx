@@ -19,7 +19,7 @@ function toMonthKey(date: Date): string {
   return `${y}-${m}`;
 }
 
-function isDisplayableImageUrl(url: string | null | undefined): boolean {
+function isDisplayableImageUrl(url: string | null | undefined): url is string {
   if (!url) return false;
   const lower = url.toLowerCase();
   if (lower.startsWith('blob:') || lower.startsWith('data:')) return false;
@@ -64,6 +64,8 @@ export default function JournalScreen() {
         fat: Math.round((detailMeal!.fat_g / mealDetail.totalMacros) * 100),
       }
     : { protein: 0, carbs: 0, fat: 0 };
+
+  const detailImageUrl = detailMeal?.image_url;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -260,8 +262,8 @@ export default function JournalScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
-              {isDisplayableImageUrl(detailMeal?.image_url) ? (
-                <Image source={{ uri: detailMeal.image_url }} style={styles.detailImage} />
+              {isDisplayableImageUrl(detailImageUrl) ? (
+                <Image source={{ uri: detailImageUrl }} style={styles.detailImage} />
               ) : (
                 <View style={[styles.detailImagePlaceholder, { backgroundColor: colors.background }]}> 
                   <MaterialIcons name="restaurant" size={36} color={colors.textMuted} />

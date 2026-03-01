@@ -96,7 +96,7 @@ export default function DashboardScreen() {
 
         {/* Today's Nourishment */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Nourishment</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today&apos;s Nourishment</Text>
           <TouchableOpacity onPress={() => router.push('/journal')}>
             <Text style={[styles.viewAll, { color: colors.primary }]}>View All</Text>
           </TouchableOpacity>
