@@ -10,9 +10,11 @@ import type { HabitResponse } from '@/shared/types/api';
 
 type PlantEmoji = Record<string, string>;
 const PLANT_EMOJIS: PlantEmoji = {
-  healthy: '🌿',
-  growing: '🌱',
-  wilted: '🥀',
+  fern: '🌿',
+  palm: '🌱',
+  mint: '🥀',
+  cactus: '🌵',
+  default: '🌱',
 };
 
 type Props = {
@@ -23,8 +25,11 @@ type Props = {
 };
 
 export function PlantCard({ habit, colors, colorScheme, onCheckIn }: Props) {
+  const streak = habit.streak ?? habit.streak_days ?? 0;
+  const progress = Math.round(habit.progress ?? habit.progress_percentage ?? 0);
+  const checkedToday = Boolean(habit.is_checked_today ?? habit.checked_today);
   const isWilted = habit.plant_state === 'wilted';
-  const emoji = PLANT_EMOJIS[habit.plant_state] ?? '🌱';
+  const emoji = PLANT_EMOJIS[habit.plant_type] ?? PLANT_EMOJIS.default;
 
   return (
     <View
@@ -42,13 +47,13 @@ export function PlantCard({ habit, colors, colorScheme, onCheckIn }: Props) {
       {habit.plant_state === 'healthy' && (
         <View style={[styles.badge, { backgroundColor: '#FFF3E0' }]}>
           <MaterialIcons name="local-fire-department" size={14} color={colors.accent} />
-          <Text style={[styles.badgeText, { color: colors.accent }]}>{habit.streak} Days</Text>
+          <Text style={[styles.badgeText, { color: colors.accent }]}>{streak} Days</Text>
         </View>
       )}
       {habit.plant_state === 'growing' && (
         <View style={[styles.badge, { backgroundColor: '#E8F5E9' }]}>
           <MaterialIcons name="eco" size={14} color={colors.primary} />
-          <Text style={[styles.badgeText, { color: colors.primary }]}>{habit.streak} Days</Text>
+          <Text style={[styles.badgeText, { color: colors.primary }]}>{streak} Days</Text>
         </View>
       )}
       {isWilted && (
@@ -91,8 +96,8 @@ export function PlantCard({ habit, colors, colorScheme, onCheckIn }: Props) {
             <Text style={[styles.progressLabel, { color: colors.textMuted }]}>
               Lvl {habit.level}
             </Text>
-            <Text style={[styles.progressLabel, { color: colors.textMuted }]}>
-              {habit.progress}%
+            <Text style={[styles.progressLabel, { color: checkedToday ? colors.primary : colors.textMuted }]}> 
+              {checkedToday ? '✓ Done' : `${progress}%`}
             </Text>
           </View>
           <View
@@ -102,7 +107,7 @@ export function PlantCard({ habit, colors, colorScheme, onCheckIn }: Props) {
             ]}
           >
             <View
-              style={[styles.progressFill, { width: `${habit.progress}%`, backgroundColor: colors.primary }]}
+              style={[styles.progressFill, { width: `${progress}%`, backgroundColor: colors.primary }]}
             />
           </View>
         </View>

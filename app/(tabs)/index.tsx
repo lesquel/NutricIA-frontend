@@ -25,6 +25,13 @@ export default function DashboardScreen() {
   const { data: waterLog } = useWaterLog();
 
   const totalCalories = summary?.total_calories ?? 0;
+  const proteinTotal = summary?.total_protein ?? summary?.total_protein_g ?? 0;
+  const carbsTotal = summary?.total_carbs ?? summary?.total_carbs_g ?? 0;
+  const fatTotal = summary?.total_fat ?? summary?.total_fat_g ?? 0;
+  const macroTotal = proteinTotal + carbsTotal + fatTotal;
+  const proteinPct = macroTotal > 0 ? Math.round((proteinTotal / macroTotal) * 100) : 0;
+  const carbsPct = macroTotal > 0 ? Math.round((carbsTotal / macroTotal) * 100) : 0;
+  const fatPct = macroTotal > 0 ? Math.round((fatTotal / macroTotal) * 100) : 0;
   const calorieGoal = user?.calorie_goal ?? 2200;
   const waterCups = waterLog?.cups ?? 0;
   const waterGoalCups = waterLog?.goal_cups ?? Math.max(1, Math.round((user?.water_goal_ml ?? 2000) / 250));
@@ -64,9 +71,9 @@ export default function DashboardScreen() {
 
         {/* Macro Pills */}
         <View style={styles.macrosGrid}>
-          <MacroPill icon="egg-alt" label="Protein" value={`${summary?.total_protein_g ?? 0}g`} />
-          <MacroPill icon="grain" label="Carbs" value={`${summary?.total_carbs_g ?? 0}g`} />
-          <MacroPill icon="water-drop" label="Fats" value={`${summary?.total_fat_g ?? 0}g`} />
+          <MacroPill icon="egg-alt" label="Protein" value={`${Math.round(proteinTotal)}g (${proteinPct}%)`} />
+          <MacroPill icon="grain" label="Carbs" value={`${Math.round(carbsTotal)}g (${carbsPct}%)`} />
+          <MacroPill icon="water-drop" label="Fats" value={`${Math.round(fatTotal)}g (${fatPct}%)`} />
         </View>
 
         <View style={[styles.hydrationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 

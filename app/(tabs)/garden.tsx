@@ -24,8 +24,6 @@ const PLANT_EMOJI: Record<string, string> = {
   palm: '🌱',
   mint: '🥀',
   cactus: '🌵',
-  flower: '🌸',
-  tree: '🌳',
   default: '🌱',
 };
 
@@ -43,6 +41,11 @@ export default function GardenScreen() {
 
   const cups = waterLog?.cups ?? 0;
   const totalCups = waterLog?.goal_cups ?? 8;
+  const hydrationRatio = totalCups > 0 ? cups / totalCups : 0;
+  const todayPlant = hydrationRatio >= 1 ? { emoji: '🌸', label: 'Blooming', subtitle: 'Great hydration today' }
+    : hydrationRatio >= 0.65 ? { emoji: '🌿', label: 'Growing', subtitle: 'Keep watering to bloom' }
+      : hydrationRatio > 0 ? { emoji: '🌱', label: 'Sprouting', subtitle: 'Nice start, keep going' }
+        : { emoji: '🪴', label: 'Needs water', subtitle: 'Drink water to grow your plant' };
 
   const toggleCup = (index: number) => {
     const newCups = index + 1 === cups ? index : index + 1;
@@ -110,6 +113,20 @@ export default function GardenScreen() {
           )}
         </View>
 
+        <View style={[styles.todayPlantCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+          <View style={styles.todayPlantLeft}>
+            <View style={[styles.todayPlantEmojiWrap, { backgroundColor: colors.background }]}>
+              <Text style={styles.todayPlantEmoji}>{todayPlant.emoji}</Text>
+            </View>
+            <View>
+              <Text style={[styles.todayPlantTitle, { color: colors.text }]}>Today&apos;s Plant</Text>
+              <Text style={[styles.todayPlantState, { color: colors.primary }]}>{todayPlant.label}</Text>
+              <Text style={[styles.todayPlantHint, { color: colors.textMuted }]}>{todayPlant.subtitle}</Text>
+            </View>
+          </View>
+          <Text style={[styles.todayPlantPct, { color: colors.text }]}>{Math.round(Math.min(hydrationRatio, 1) * 100)}%</Text>
+        </View>
+
         {/* Plants Header */}
         <View style={styles.plantsHeader}>
           <Text style={[styles.plantsTitle, { color: colors.text }]}>Your Plants</Text>
@@ -169,6 +186,9 @@ function PlantCard({
   colorScheme: 'light' | 'dark';
   onCheckIn: () => void;
 }) {
+  const streak = habit.streak ?? habit.streak_days ?? 0;
+  const progress = Math.round(habit.progress ?? habit.progress_percentage ?? 0);
+  const checkedToday = Boolean(habit.is_checked_today ?? habit.checked_today);
   const isWilted = habit.plant_state === 'wilted';
   const emoji = PLANT_EMOJI[habit.plant_type] ?? PLANT_EMOJI.default;
 
@@ -188,13 +208,13 @@ function PlantCard({
       {habit.plant_state === 'healthy' && (
         <View style={[styles.badge, { backgroundColor: '#FFF3E0' }]}>
           <MaterialIcons name="local-fire-department" size={14} color={colors.accent} />
-          <Text style={[styles.badgeText, { color: colors.accent }]}>{habit.streak} Days</Text>
+          <Text style={[styles.badgeText, { color: colors.accent }]}>{streak} Days</Text>
         </View>
       )}
       {habit.plant_state === 'growing' && (
         <View style={[styles.badge, { backgroundColor: '#E8F5E9' }]}>
           <MaterialIcons name="eco" size={14} color={colors.primary} />
-          <Text style={[styles.badgeText, { color: colors.primary }]}>{habit.streak} Days</Text>
+          <Text style={[styles.badgeText, { color: colors.primary }]}>{streak} Days</Text>
         </View>
       )}
       {habit.plant_state === 'wilted' && (
@@ -234,21 +254,21 @@ function PlantCard({
           <Text style={[styles.reviveText, { color: colors.waterBlue }]}>Revive</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity onPress={!habit.is_checked_today ? onCheckIn : undefined} activeOpacity={habit.is_checked_today ? 1 : 0.7}>
+        <TouchableOpacity onPress={!checkedToday ? onCheckIn : undefined} activeOpacity={checkedToday ? 1 : 0.7}>
           <View style={styles.progressSection}>
             <View style={styles.progressLabelRow}>
               <Text style={[styles.progressLabelSmall, { color: colors.textMuted }]}>
                 Lvl {habit.level}
               </Text>
-              <Text style={[styles.progressLabelSmall, { color: habit.is_checked_today ? colors.primary : colors.textMuted }]}>
-                {habit.is_checked_today ? '✓ Done' : `${habit.progress}%`}
+              <Text style={[styles.progressLabelSmall, { color: checkedToday ? colors.primary : colors.textMuted }]}> 
+                {checkedToday ? '✓ Done' : `${progress}%`}
               </Text>
             </View>
             <View style={[styles.progressTrack, { backgroundColor: colorScheme === 'dark' ? colors.border : '#ECECEC' }]}>
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${habit.progress}%`, backgroundColor: colors.primary },
+                  { width: `${progress}%`, backgroundColor: colors.primary },
                 ]}
               />
             </View>
@@ -321,6 +341,28 @@ const styles = StyleSheet.create({
     marginTop: 28,
     marginBottom: 14,
   },
+  todayPlantCard: {
+    marginTop: 12,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  todayPlantLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  todayPlantEmojiWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayPlantEmoji: { fontSize: 28 },
+  todayPlantTitle: { fontSize: FontSize.base, fontWeight: '700' },
+  todayPlantState: { fontSize: FontSize.sm, fontWeight: '700', marginTop: 1 },
+  todayPlantHint: { fontSize: FontSize.xs, marginTop: 1 },
+  todayPlantPct: { fontSize: FontSize.xl, fontWeight: '700' },
   plantsTitle: { fontSize: FontSize.xl, fontWeight: '700' },
   viewAll: { fontSize: FontSize.sm, fontWeight: '600' },
   plantsGrid: {
