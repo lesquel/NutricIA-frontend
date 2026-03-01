@@ -194,7 +194,7 @@ export default function LoginScreen() {
             style={styles.registerLink}
           >
             <Text style={[styles.registerText, { color: colors.textMuted }]}>
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Text style={{ color: colors.primary, fontWeight: '700' }}>Create One</Text>
             </Text>
           </TouchableOpacity>
