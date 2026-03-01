@@ -15,9 +15,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHabits, useCheckInHabit, useWaterLog, useLogWater } from '@/features/garden/hooks/use-garden';
+import { DateSelector } from '@/shared/components/date-selector';
 import type { HabitResponse, PlantState } from '@/shared/types/api';
-
-const TOTAL_CUPS = 8;
 
 // Map plant_type → emoji
 const PLANT_EMOJI: Record<string, string> = {
@@ -43,6 +42,7 @@ export default function GardenScreen() {
   const checkInHabit = useCheckInHabit();
 
   const cups = waterLog?.cups ?? 0;
+  const totalCups = waterLog?.goal_cups ?? 8;
 
   const toggleCup = (index: number) => {
     const newCups = index + 1 === cups ? index : index + 1;
@@ -64,6 +64,8 @@ export default function GardenScreen() {
         </TouchableOpacity>
       </View>
 
+      <DateSelector />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Water Tracker */}
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -73,7 +75,7 @@ export default function GardenScreen() {
               <Text style={[styles.cardTitle, { color: colors.text }]}>Hydration</Text>
             </View>
             <Text style={[styles.cupCount, { color: colors.textMuted }]}>
-              {cups}/{TOTAL_CUPS} Cups
+              {cups}/{totalCups} Cups
             </Text>
           </View>
 
@@ -81,7 +83,7 @@ export default function GardenScreen() {
             <ActivityIndicator size="small" color={colors.waterBlue} />
           ) : (
             <View style={styles.cupsRow}>
-              {Array.from({ length: TOTAL_CUPS }).map((_, i) => {
+              {Array.from({ length: totalCups }).map((_, i) => {
                 const filled = i < cups;
                 return (
                   <TouchableOpacity
@@ -90,11 +92,8 @@ export default function GardenScreen() {
                     style={[
                       styles.cupBtn,
                       {
-                        backgroundColor: filled
-                          ? `${colors.waterBlue}18`
-                          : colorScheme === 'dark'
-                            ? colors.border
-                            : '#F0F0EC',
+                        backgroundColor: filled ? colors.waterBlue : colors.background,
+                        borderColor: filled ? colors.waterBlue : colors.border,
                       },
                     ]}
                     activeOpacity={0.7}
@@ -102,7 +101,7 @@ export default function GardenScreen() {
                     <MaterialIcons
                       name="water-drop"
                       size={20}
-                      color={filled ? colors.waterBlue : colors.waterEmpty}
+                      color={filled ? '#FFFFFF' : colors.waterBlue}
                     />
                   </TouchableOpacity>
                 );
@@ -309,6 +308,7 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 3 / 4,
     borderRadius: 999,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

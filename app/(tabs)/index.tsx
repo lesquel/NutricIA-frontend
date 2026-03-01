@@ -12,6 +12,7 @@ import { MacroPill } from '@/shared/components/macro-pill';
 import { NourishmentRing } from '@/features/dashboard/components/nourishment-ring';
 import { useDailySummary, useDailyMeals } from '@/features/dashboard/hooks/use-dashboard';
 import { useAuthStore } from '@/features/auth/store/auth.store';
+import { useWaterLog } from '@/features/garden/hooks/use-garden';
 
 export default function DashboardScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -21,9 +22,13 @@ export default function DashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const { data: summary, isLoading: summaryLoading } = useDailySummary();
   const { data: meals, isLoading: mealsLoading } = useDailyMeals();
+  const { data: waterLog } = useWaterLog();
 
   const totalCalories = summary?.total_calories ?? 0;
   const calorieGoal = user?.calorie_goal ?? 2200;
+  const waterCups = waterLog?.cups ?? 0;
+  const waterGoalCups = waterLog?.goal_cups ?? Math.max(1, Math.round((user?.water_goal_ml ?? 2000) / 250));
+  const hydrationProgress = Math.min(waterCups / waterGoalCups, 1);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -62,6 +67,24 @@ export default function DashboardScreen() {
           <MacroPill icon="egg-alt" label="Protein" value={`${summary?.total_protein_g ?? 0}g`} />
           <MacroPill icon="grain" label="Carbs" value={`${summary?.total_carbs_g ?? 0}g`} />
           <MacroPill icon="water-drop" label="Fats" value={`${summary?.total_fat_g ?? 0}g`} />
+        </View>
+
+        <View style={[styles.hydrationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+          <View style={styles.hydrationHeader}>
+            <View style={styles.hydrationTitleRow}>
+              <MaterialIcons name="water-drop" size={20} color={colors.waterBlue} />
+              <Text style={[styles.hydrationTitle, { color: colors.text }]}>Hydration</Text>
+            </View>
+            <Text style={[styles.hydrationValue, { color: colors.textMuted }]}>{waterCups}/{waterGoalCups} cups</Text>
+          </View>
+          <View style={[styles.hydrationTrack, { backgroundColor: colors.border }]}> 
+            <View
+              style={[
+                styles.hydrationFill,
+                { backgroundColor: colors.waterBlue, width: `${hydrationProgress * 100}%` },
+              ]}
+            />
+          </View>
         </View>
 
         {/* Today's Nourishment */}
@@ -153,6 +176,28 @@ const styles = StyleSheet.create({
     marginTop: 32,
     marginBottom: 16,
   },
+  hydrationCard: {
+    marginHorizontal: 24,
+    marginTop: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  hydrationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  hydrationTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  hydrationTitle: { fontSize: FontSize.base, fontWeight: '700' },
+  hydrationValue: { fontSize: FontSize.sm, fontWeight: '600' },
+  hydrationTrack: {
+    height: 7,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  hydrationFill: { height: '100%', borderRadius: 8 },
   sectionTitle: { fontSize: FontSize.xl, fontWeight: '700' },
   viewAll: { fontSize: FontSize.sm, fontWeight: '500' },
   emptyState: {

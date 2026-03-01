@@ -34,6 +34,10 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError && error.body && typeof error.body === 'object') {
     const detail = (error.body as { detail?: unknown }).detail;
     if (typeof detail === 'string' && detail.trim()) return detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0] as { msg?: unknown };
+      if (typeof first?.msg === 'string' && first.msg.trim()) return first.msg;
+    }
   }
   return fallback;
 }
@@ -150,13 +154,12 @@ export default function ScanScreen() {
 
     saveMeal.mutate(
       {
-        food_name: scanResult.food_name,
-        description: scanResult.description,
-        calories: scanResult.estimated_calories,
+        name: scanResult.name,
+        calories: scanResult.calories,
         protein_g: scanResult.protein_g,
         carbs_g: scanResult.carbs_g,
         fat_g: scanResult.fat_g,
-        fiber_g: scanResult.fiber_g,
+        confidence_score: scanResult.confidence,
         meal_type: selectedMealType,
         tags: scanResult.tags,
         image_url: photoUri ?? undefined,
@@ -170,8 +173,11 @@ export default function ScanScreen() {
             { text: 'OK' },
           ]);
         },
-        onError: () => {
-          Alert.alert('Error', 'Failed to save meal. Please try again.');
+        onError: (error) => {
+          Alert.alert(
+            'Save Failed',
+            getApiErrorMessage(error, 'Failed to save meal. Please try again.'),
+          );
         },
       }
     );
@@ -289,8 +295,8 @@ export default function ScanScreen() {
 
             {scanResult && (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.resultTitle}>{scanResult.food_name}</Text>
-                <Text style={styles.resultDesc}>{scanResult.description}</Text>
+                <Text style={styles.resultTitle}>{scanResult.name}</Text>
+                <Text style={styles.resultDesc}>{scanResult.ingredients.join(', ')}</Text>
 
                 <View style={styles.resultConfidence}>
                   <MaterialIcons name="auto-awesome" size={16} color={Colors.light.primary} />
@@ -302,7 +308,7 @@ export default function ScanScreen() {
                 {/* Nutrition Grid */}
                 <View style={styles.nutriGrid}>
                   <View style={styles.nutriItem}>
-                    <Text style={styles.nutriValue}>{scanResult.estimated_calories}</Text>
+                    <Text style={styles.nutriValue}>{scanResult.calories}</Text>
                     <Text style={styles.nutriLabel}>kcal</Text>
                   </View>
                   <View style={styles.nutriItem}>

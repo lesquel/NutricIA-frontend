@@ -6,6 +6,10 @@ import { apiClient } from '@/shared/api/client';
 import { appendFileToFormData } from '@/shared/lib/form-data';
 import type { ScanResult, MealResponse, MealType } from '@/shared/types/api';
 
+type UploadImageResponse = {
+  image_url: string;
+};
+
 export async function scanFood(imageUri: string): Promise<ScanResult> {
   const formData = new FormData();
   await appendFileToFormData(formData, 'file', imageUri, 'food.jpg', 'image/jpeg');
@@ -16,16 +20,36 @@ export async function scanFood(imageUri: string): Promise<ScanResult> {
 }
 
 export async function saveMeal(data: {
-  food_name: string;
-  description: string;
+  name: string;
   calories: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
-  fiber_g: number;
   meal_type: MealType;
+  confidence_score?: number;
   tags: string[];
   image_url?: string;
 }): Promise<MealResponse> {
-  return apiClient.post<MealResponse>('/meals', data);
+  let persistedImageUrl = data.image_url;
+
+  if (
+    persistedImageUrl &&
+    (
+      persistedImageUrl.startsWith('file://') ||
+      persistedImageUrl.startsWith('content://') ||
+      persistedImageUrl.startsWith('/') ||
+      persistedImageUrl.startsWith('blob:') ||
+      persistedImageUrl.startsWith('data:')
+    )
+  ) {
+    const formData = new FormData();
+    await appendFileToFormData(formData, 'file', persistedImageUrl, 'meal.jpg', 'image/jpeg');
+    const uploaded = await apiClient.upload<UploadImageResponse>('/meals/upload-image', formData);
+    persistedImageUrl = uploaded.image_url;
+  }
+
+  return apiClient.post<MealResponse>('/meals', {
+    ...data,
+    image_url: persistedImageUrl,
+  });
 }

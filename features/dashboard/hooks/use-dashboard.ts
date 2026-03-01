@@ -23,5 +23,6 @@ export function useDailyMeals() {
   return useQuery({
     queryKey: ['meals', 'daily', dateStr],
     queryFn: () => fetchDailyMeals(dateStr),
+    select: (data) => data.meals,
   });
 }

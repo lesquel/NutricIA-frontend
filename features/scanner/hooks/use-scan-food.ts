@@ -17,14 +17,13 @@ export function useSaveMeal() {
 
   return useMutation({
     mutationFn: (data: {
-      food_name: string;
-      description: string;
+      name: string;
       calories: number;
       protein_g: number;
       carbs_g: number;
       fat_g: number;
-      fiber_g: number;
       meal_type: MealType;
+      confidence_score?: number;
       tags: string[];
       image_url?: string;
     }) => saveMeal(data),
