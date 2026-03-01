@@ -62,15 +62,19 @@ export type PlantState = 'healthy' | 'growing' | 'wilted';
 export type HabitResponse = {
   id: string;
   name: string;
-  description: string;
-  frequency_days: number;
+  description?: string;
+  frequency_days?: number;
+  icon?: string;
   plant_type: string;
   plant_state: PlantState;
   level: number;
-  progress: number;
-  streak: number;
-  is_checked_today: boolean;
-  created_at: string;
+  progress?: number;
+  progress_percentage?: number;
+  streak?: number;
+  streak_days?: number;
+  is_checked_today?: boolean;
+  checked_today?: boolean;
+  created_at?: string;
 };
 
 export type WaterLogResponse = {
@@ -81,11 +85,17 @@ export type WaterLogResponse = {
 
 /* ─── Analytics ─── */
 export type DailySummary = {
+  date?: string;
   total_calories: number;
-  total_protein_g: number;
-  total_carbs_g: number;
-  total_fat_g: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  total_protein_g?: number;
+  total_carbs_g?: number;
+  total_fat_g?: number;
   meal_count: number;
+  calorie_goal?: number;
+  goal_percentage?: number;
 };
 
 export type WeeklySummary = {
