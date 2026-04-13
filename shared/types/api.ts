@@ -62,19 +62,20 @@ export type PlantState = 'healthy' | 'growing' | 'wilted';
 export type HabitResponse = {
   id: string;
   name: string;
-  description?: string;
-  frequency_days?: number;
-  icon?: string;
+  icon: string;
   plant_type: string;
-  plant_state: PlantState;
   level: number;
-  progress?: number;
-  progress_percentage?: number;
-  streak?: number;
-  streak_days?: number;
-  is_checked_today?: boolean;
-  checked_today?: boolean;
-  created_at?: string;
+  streak_days: number;
+  plant_state: PlantState;
+  progress_percentage: number;
+  checked_today: boolean;
+};
+
+export type HabitCheckInResponse = {
+  habit_id: string;
+  checked_at: string;
+  new_streak: number;
+  new_level: number;
 };
 
 export type WaterLogResponse = {
@@ -85,25 +86,24 @@ export type WaterLogResponse = {
 
 /* ─── Analytics ─── */
 export type DailySummary = {
-  date?: string;
+  date: string;
   total_calories: number;
   total_protein: number;
   total_carbs: number;
   total_fat: number;
-  total_protein_g?: number;
-  total_carbs_g?: number;
-  total_fat_g?: number;
   meal_count: number;
-  calorie_goal?: number;
-  goal_percentage?: number;
+  calorie_goal: number;
+  goal_percentage: number;
 };
 
 export type WeeklySummary = {
-  daily_summaries: Record<string, DailySummary>;
-  average: {
+  week_start: string;
+  week_end: string;
+  daily_averages: {
     avg_calories: number;
-    avg_protein_g: number;
-    avg_carbs_g: number;
-    avg_fat_g: number;
+    avg_protein: number;
+    avg_carbs: number;
+    avg_fat: number;
   };
+  days: DailySummary[];
 };

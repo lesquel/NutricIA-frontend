@@ -25,9 +25,9 @@ export default function DashboardScreen() {
   const { data: waterLog } = useWaterLog();
 
   const totalCalories = summary?.total_calories ?? 0;
-  const proteinTotal = summary?.total_protein ?? summary?.total_protein_g ?? 0;
-  const carbsTotal = summary?.total_carbs ?? summary?.total_carbs_g ?? 0;
-  const fatTotal = summary?.total_fat ?? summary?.total_fat_g ?? 0;
+  const proteinTotal = summary?.total_protein ?? 0;
+  const carbsTotal = summary?.total_carbs ?? 0;
+  const fatTotal = summary?.total_fat ?? 0;
   const macroTotal = proteinTotal + carbsTotal + fatTotal;
   const proteinPct = macroTotal > 0 ? Math.round((proteinTotal / macroTotal) * 100) : 0;
   const carbsPct = macroTotal > 0 ? Math.round((carbsTotal / macroTotal) * 100) : 0;

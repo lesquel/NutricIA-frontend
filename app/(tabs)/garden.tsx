@@ -186,9 +186,9 @@ function PlantCard({
   colorScheme: 'light' | 'dark';
   onCheckIn: () => void;
 }) {
-  const streak = habit.streak ?? habit.streak_days ?? 0;
-  const progress = Math.round(habit.progress ?? habit.progress_percentage ?? 0);
-  const checkedToday = Boolean(habit.is_checked_today ?? habit.checked_today);
+  const streak = habit.streak_days;
+  const progress = Math.round(habit.progress_percentage);
+  const checkedToday = habit.checked_today;
   const isWilted = habit.plant_state === 'wilted';
   const emoji = PLANT_EMOJI[habit.plant_type] ?? PLANT_EMOJI.default;
 
@@ -238,7 +238,7 @@ function PlantCard({
           <Text style={[styles.plantSpecies, { color: colors.error }]}>Needs Water</Text>
         ) : (
           <Text style={[styles.plantSpecies, { color: colors.textMuted }]}>
-            {habit.description || habit.plant_type}
+            {habit.plant_type}
           </Text>
         )}
       </View>

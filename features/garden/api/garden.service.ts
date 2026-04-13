@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from '@/shared/api/client';
-import type { HabitResponse, WaterLogResponse } from '@/shared/types/api';
+import type { HabitResponse, HabitCheckInResponse, WaterLogResponse } from '@/shared/types/api';
 
 export async function fetchHabits(): Promise<HabitResponse[]> {
   return apiClient.get<HabitResponse[]>('/habits');
@@ -18,8 +18,8 @@ export async function createHabit(data: {
   return apiClient.post<HabitResponse>('/habits', data);
 }
 
-export async function checkInHabit(habitId: string): Promise<HabitResponse> {
-  return apiClient.post<HabitResponse>(`/habits/${habitId}/check-in`);
+export async function checkInHabit(habitId: string): Promise<HabitCheckInResponse> {
+  return apiClient.post<HabitCheckInResponse>(`/habits/${habitId}/check-in`);
 }
 
 export async function fetchWaterLog(date: string): Promise<WaterLogResponse> {
