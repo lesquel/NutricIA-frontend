@@ -18,12 +18,16 @@ import { useRouter } from 'expo-router';
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEmailLogin } from '@/features/auth/hooks/use-auth';
+import { useGoogleAuth } from '@/features/auth/hooks/use-google-auth';
+import { useAppleAuth } from '@/features/auth/hooks/use-apple-auth';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
   const emailLogin = useEmailLogin();
+  const { loginWithGoogle, isPending: googlePending } = useGoogleAuth();
+  const { loginWithApple, isPending: applePending, isAvailable: appleAvailable } = useAppleAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -174,16 +178,32 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={[styles.oauthBtn, { borderColor: colors.border }]}
                 activeOpacity={0.7}
+                onPress={loginWithGoogle}
+                disabled={googlePending}
               >
-                <MaterialIcons name="g-mobiledata" size={28} color={colors.text} />
-                <Text style={[styles.oauthText, { color: colors.text }]}>Google</Text>
+                {googlePending ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <>
+                    <MaterialIcons name="g-mobiledata" size={28} color={colors.text} />
+                    <Text style={[styles.oauthText, { color: colors.text }]}>Google</Text>
+                  </>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.oauthBtn, { borderColor: colors.border }]}
                 activeOpacity={0.7}
+                onPress={loginWithApple}
+                disabled={applePending}
               >
-                <MaterialIcons name="apple" size={24} color={colors.text} />
-                <Text style={[styles.oauthText, { color: colors.text }]}>Apple</Text>
+                {applePending ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <>
+                    <MaterialIcons name="apple" size={24} color={colors.text} />
+                    <Text style={[styles.oauthText, { color: colors.text }]}>Apple</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
