@@ -27,7 +27,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
   hasOnboarded: false,
   _hydrated: false,
   setUser: (user) => set({ user, isAuthenticated: !!user }),
-  clearAuth: () => set({ user: null, isAuthenticated: false }),
+  clearAuth: () => {
+    storage.deleteItem('auth_token').catch(() => {});
+    storage.deleteItem('refresh_token').catch(() => {});
+    set({ user: null, isAuthenticated: false });
+  },
   completeOnboarding: () => {
     storage.setItem(ONBOARDED_KEY, '1').catch(() => {});
     set({ hasOnboarded: true });

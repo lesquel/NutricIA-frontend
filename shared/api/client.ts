@@ -33,13 +33,39 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
   timeout?: number;
   skipAuth?: boolean;
+  /** Prevents infinite retry loops when refreshing tokens. */
+  _retried?: boolean;
 };
+
+async function tryRefreshToken(): Promise<boolean> {
+  try {
+    const refreshToken = await storage.getItem('refresh_token');
+    if (!refreshToken) return false;
+
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    await storage.setItem('auth_token', data.access_token);
+    if (data.refresh_token) {
+      await storage.setItem('refresh_token', data.refresh_token);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function request<T = unknown>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { body, timeout = API_TIMEOUT, skipAuth = false, ...init } = options;
+  const { body, timeout = API_TIMEOUT, skipAuth = false, _retried = false, ...init } = options;
 
   const headers = new Headers(init.headers);
 
@@ -68,6 +94,14 @@ async function request<T = unknown>(
     });
 
     if (!response.ok) {
+      // Try token refresh on 401 (only once)
+      if (response.status === 401 && !skipAuth && !_retried) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+          return request<T>(path, { ...options, _retried: true });
+        }
+      }
+
       const errorBody = await response.json().catch(() => null);
       throw new ApiError(response.status, errorBody);
     }

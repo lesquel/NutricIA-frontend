@@ -21,6 +21,9 @@ export async function registerWithEmail(
   );
 
   await storage.setItem('auth_token', data.access_token);
+  if (data.refresh_token) {
+    await storage.setItem('refresh_token', data.refresh_token);
+  }
   useAuthStore.getState().setUser(data.user);
   return data;
 }
@@ -36,6 +39,9 @@ export async function loginWithEmail(
   );
 
   await storage.setItem('auth_token', data.access_token);
+  if (data.refresh_token) {
+    await storage.setItem('refresh_token', data.refresh_token);
+  }
   useAuthStore.getState().setUser(data.user);
   return data;
 }
@@ -53,6 +59,9 @@ export async function loginWithOAuth(
   );
 
   await storage.setItem('auth_token', data.access_token);
+  if (data.refresh_token) {
+    await storage.setItem('refresh_token', data.refresh_token);
+  }
   useAuthStore.getState().setUser(data.user);
   return data;
 }
@@ -65,4 +74,5 @@ export async function fetchCurrentUser(): Promise<UserProfile> {
 
 export async function logout(): Promise<void> {
   await storage.deleteItem('auth_token');
+  await storage.deleteItem('refresh_token');
 }

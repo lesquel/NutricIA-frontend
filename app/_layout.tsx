@@ -10,6 +10,7 @@ import { Colors } from '@/constants/theme';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/shared/api/query-client';
 import { useAuthStore, hydrateAuthStore } from '@/features/auth/store/auth.store';
+import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 
 // Custom themes matching NutricIA palette
@@ -119,8 +120,10 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <RootNavigator />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <RootNavigator />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
