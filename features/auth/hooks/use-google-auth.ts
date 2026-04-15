@@ -37,8 +37,13 @@ export function useGoogleAuth() {
           androidClientId: GOOGLE_ANDROID_CLIENT_ID,
           iosClientId: GOOGLE_IOS_CLIENT_ID,
         }
-      : // Provide a dummy config so the hook call is unconditional (rules of hooks)
-        { webClientId: 'not-configured' },
+      : // Provide a dummy config with all platform IDs so the hook never
+        // throws validation errors during bundle initialization.
+        {
+          webClientId: 'not-configured',
+          androidClientId: 'not-configured',
+          iosClientId: 'not-configured',
+        },
   );
 
   const loginWithGoogle = useCallback(async () => {
