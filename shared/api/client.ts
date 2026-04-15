@@ -4,11 +4,8 @@
  * Wraps `fetch` with baseURL, JWT injection, timeout, and error handling.
  */
 
+import { API_BASE_URL, API_TIMEOUT } from '@/constants/api';
 import { storage } from '@/shared/lib/storage';
-
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
-const API_TIMEOUT = 30_000;
 
 export class ApiError extends Error {
   constructor(

@@ -152,6 +152,19 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleSignOut = async () => {
+    if (logoutMutation.isPending) {
+      return;
+    }
+
+    try {
+      await logoutMutation.mutateAsync();
+      router.replace('/login');
+    } catch {
+      Alert.alert('Error', 'Could not sign out. Please try again.');
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -402,23 +415,7 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
             activeOpacity={0.6}
-            onPress={() => {
-              Alert.alert(
-                'Sign Out',
-                'Are you sure you want to sign out?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Sign Out',
-                    style: 'destructive',
-                    onPress: () =>
-                      logoutMutation.mutate(undefined, {
-                        onSuccess: () => router.replace('/login'),
-                      }),
-                  },
-                ],
-              );
-            }}
+            onPress={handleSignOut}
           >
             <View style={styles.settingsRowLeft}>
               <View style={[styles.settingsIconCircle, { backgroundColor: '#C6676618' }]}>

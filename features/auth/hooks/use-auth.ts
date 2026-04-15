@@ -3,6 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { storage } from '@/shared/lib/storage';
 import {
   loginWithOAuth,
   loginWithEmail,
@@ -19,7 +20,13 @@ export function useCurrentUser() {
     queryKey: ['auth', 'me'],
     queryFn: async () => {
       const user = await fetchCurrentUser();
-      setUser(user);
+
+      // Prevent stale in-flight auth checks from restoring the user after logout.
+      const currentToken = await storage.getItem('auth_token');
+      if (currentToken) {
+        setUser(user);
+      }
+
       return user;
     },
     retry: false,
@@ -74,8 +81,11 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: logout,
-    onSuccess: () => {
+    onMutate: async () => {
+      await qc.cancelQueries();
       clearAuth();
+    },
+    onSuccess: () => {
       qc.clear();
     },
   });
