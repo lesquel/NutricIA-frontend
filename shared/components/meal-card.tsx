@@ -4,11 +4,12 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { resolveMediaUrl } from '../lib/media-url';
 import type { MealResponse } from '@/shared/types/api';
 
 type LegacyMeal = {
@@ -38,13 +39,6 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function isDisplayableImageUrl(url: string | null | undefined): boolean {
-  if (!url) return false;
-  const lower = url.toLowerCase();
-  if (lower.startsWith('blob:') || lower.startsWith('data:')) return false;
-  return true;
-}
-
 export function MealCard({ meal, onPress }: MealCardProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -54,7 +48,7 @@ export function MealCard({ meal, onPress }: MealCardProps) {
   const time = isApiMeal(meal) ? formatTime(meal.logged_at) : meal.time;
   const { calories } = meal;
   const tag = isApiMeal(meal) ? meal.tags?.[0] : meal.tag;
-  const imageUrl = isApiMeal(meal) && isDisplayableImageUrl(meal.image_url) ? meal.image_url : null;
+  const imageUrl = isApiMeal(meal) ? resolveMediaUrl(meal.image_url) : null;
   const confidencePct = isApiMeal(meal) ? Math.round((meal.confidence_score ?? 0) * 100) : null;
   const macroPct = isApiMeal(meal)
     ? (() => {
@@ -71,14 +65,15 @@ export function MealCard({ meal, onPress }: MealCardProps) {
     : null;
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.7}
-      style={[
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
+          opacity: onPress && pressed ? 0.7 : 1,
           ...Shadows.sm,
         },
       ]}
@@ -117,7 +112,7 @@ export function MealCard({ meal, onPress }: MealCardProps) {
         <Text style={[styles.calorieValue, { color: colors.text }]}>{calories}</Text>
         <Text style={[styles.calorieUnit, { color: colors.textMuted }]}>kcal</Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

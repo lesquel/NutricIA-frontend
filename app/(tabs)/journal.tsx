@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DateSelector } from '@/shared/components/date-selector';
 import { MealCard } from '@/shared/components/meal-card';
+import { resolveMediaUrl } from '../../shared/lib/media-url';
 import { useJournalMeals, useMealCalendar } from '@/features/journal/hooks/use-journal';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useDateStore } from '@/shared/store/date.store';
@@ -17,13 +18,6 @@ function toMonthKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   return `${y}-${m}`;
-}
-
-function isDisplayableImageUrl(url: string | null | undefined): url is string {
-  if (!url) return false;
-  const lower = url.toLowerCase();
-  if (lower.startsWith('blob:') || lower.startsWith('data:')) return false;
-  return true;
 }
 
 export default function JournalScreen() {
@@ -65,7 +59,76 @@ export default function JournalScreen() {
       }
     : { protein: 0, carbs: 0, fat: 0 };
 
-  const detailImageUrl = detailMeal?.image_url;
+  const detailImageUrl = resolveMediaUrl(detailMeal?.image_url);
+  const detailModalVisible = detailMeal !== null;
+
+  const detailSheet = (
+    <View style={[styles.detailModal, Platform.OS === 'web' && styles.webDetailModal, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+      <View style={styles.detailHeader}>
+        <Text style={[styles.detailTitle, { color: colors.text }]}>Meal Details</Text>
+        <TouchableOpacity onPress={() => setDetailMeal(null)} style={[styles.detailClose, { backgroundColor: colors.background }]}> 
+          <MaterialIcons name="close" size={20} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
+        {detailImageUrl ? (
+          <Image source={{ uri: detailImageUrl }} style={styles.detailImage} />
+        ) : (
+          <View style={[styles.detailImagePlaceholder, { backgroundColor: colors.background }]}> 
+            <MaterialIcons name="restaurant" size={36} color={colors.textMuted} />
+          </View>
+        )}
+
+        <Text style={[styles.detailMealName, { color: colors.text }]}>{detailMeal?.name}</Text>
+        <Text style={[styles.detailMealMeta, { color: colors.textMuted }]}> 
+          {detailMeal?.meal_type} • {detailMeal ? new Date(detailMeal.logged_at).toLocaleString() : ''}
+        </Text>
+
+        {!!detailMeal?.tags?.length && (
+          <View style={styles.tagRow}>
+            {detailMeal.tags.slice(0, 3).map((tag) => (
+              <View key={tag} style={[styles.detailTag, { backgroundColor: colors.primary + '15' }]}>
+                <Text style={[styles.detailTagText, { color: colors.primary }]}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={[styles.detailStatsCard, { backgroundColor: colors.background, borderColor: colors.border }]}> 
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Calories</Text>
+            <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.calories ?? 0} kcal</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Protein</Text>
+            <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.protein_g ?? 0}g ({mealPercentages.protein}%)</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Carbs</Text>
+            <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.carbs_g ?? 0}g ({mealPercentages.carbs}%)</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Fat</Text>
+            <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.fat_g ?? 0}g ({mealPercentages.fat}%)</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>AI Confidence</Text>
+            <Text style={[styles.detailValue, { color: colors.primary }]}> 
+              {Math.round((detailMeal?.confidence_score ?? 0) * 100)}%
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.closeBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
+          onPress={() => setDetailMeal(null)}
+        >
+          <Text style={styles.closeBtnText}>Done</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -251,75 +314,25 @@ export default function JournalScreen() {
         </View>
       </Modal>
 
-      <Modal visible={!!detailMeal} transparent animationType="slide" onRequestClose={() => setDetailMeal(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.detailModal, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-            <View style={styles.detailHeader}>
-              <Text style={[styles.detailTitle, { color: colors.text }]}>Meal Details</Text>
-              <TouchableOpacity onPress={() => setDetailMeal(null)} style={[styles.detailClose, { backgroundColor: colors.background }]}> 
-                <MaterialIcons name="close" size={20} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailContent}>
-              {isDisplayableImageUrl(detailImageUrl) ? (
-                <Image source={{ uri: detailImageUrl }} style={styles.detailImage} />
-              ) : (
-                <View style={[styles.detailImagePlaceholder, { backgroundColor: colors.background }]}> 
-                  <MaterialIcons name="restaurant" size={36} color={colors.textMuted} />
-                </View>
-              )}
-
-              <Text style={[styles.detailMealName, { color: colors.text }]}>{detailMeal?.name}</Text>
-              <Text style={[styles.detailMealMeta, { color: colors.textMuted }]}> 
-                {detailMeal?.meal_type} • {detailMeal ? new Date(detailMeal.logged_at).toLocaleString() : ''}
-              </Text>
-
-              {!!detailMeal?.tags?.length && (
-                <View style={styles.tagRow}>
-                  {detailMeal.tags.slice(0, 3).map((tag) => (
-                    <View key={tag} style={[styles.detailTag, { backgroundColor: colors.primary + '15' }]}>
-                      <Text style={[styles.detailTagText, { color: colors.primary }]}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <View style={[styles.detailStatsCard, { backgroundColor: colors.background, borderColor: colors.border }]}> 
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Calories</Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.calories ?? 0} kcal</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Protein</Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.protein_g ?? 0}g ({mealPercentages.protein}%)</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Carbs</Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.carbs_g ?? 0}g ({mealPercentages.carbs}%)</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Fat</Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.fat_g ?? 0}g ({mealPercentages.fat}%)</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: colors.textMuted }]}>AI Confidence</Text>
-                  <Text style={[styles.detailValue, { color: colors.primary }]}> 
-                    {Math.round((detailMeal?.confidence_score ?? 0) * 100)}%
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.closeBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
-                onPress={() => setDetailMeal(null)}
-              >
-                <Text style={styles.closeBtnText}>Done</Text>
-              </TouchableOpacity>
-            </ScrollView>
+      {Platform.OS === 'web' ? (
+        detailModalVisible ? (
+          <Pressable style={[styles.modalOverlay, styles.webModalOverlay]} onPress={() => setDetailMeal(null)}>
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              {detailSheet}
+            </Pressable>
+          </Pressable>
+        ) : null
+      ) : (
+        <Modal visible={detailModalVisible} transparent animationType="slide" onRequestClose={() => setDetailMeal(null)}>
+          <View style={styles.modalOverlay}>
+            {detailSheet}
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -412,6 +425,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  webModalOverlay: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 200,
+  },
   calendarModal: {
     borderRadius: 16,
     borderWidth: 1,
@@ -484,6 +505,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     maxHeight: '86%',
+  },
+  webDetailModal: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   detailContent: { paddingBottom: 4 },
   detailHeader: {

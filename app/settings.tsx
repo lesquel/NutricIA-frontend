@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeStore, type ThemePreference } from '@/shared/store/theme.store';
+import { resolveMediaUrl } from '../shared/lib/media-url';
 import { useUserSettings, useUpdateProfile, useUploadAvatar, useDeleteAvatar, useUpdateGoals, useUpdateDietaryPreferences, useDeleteAccount } from '@/features/settings/hooks/use-settings';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useLogout } from '@/features/auth/hooks/use-auth';
@@ -96,7 +97,7 @@ export default function SettingsScreen() {
   };
 
   const displayName = settings?.name ?? user?.name ?? 'User';
-  const avatarUrl = settings?.avatar_url ?? user?.avatar_url ?? null;
+  const avatarUrl = resolveMediaUrl(settings?.avatar_url ?? user?.avatar_url);
   const initials = displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   const themeLabel = THEME_OPTIONS.find((o) => o.value === themePreference)?.label ?? 'System';
 
