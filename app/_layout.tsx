@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -12,6 +13,7 @@ import { queryClient } from '@/shared/api/query-client';
 import { useAuthStore, hydrateAuthStore } from '@/features/auth/store/auth.store';
 import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { ToastProvider } from '@/shared/components/ui/ToastProvider';
 
 // Custom themes matching NutricIA palette
 const NutricIALight = {
@@ -102,6 +104,8 @@ function RootNavigator() {
         <Stack.Screen name="welcome" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="reset-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
 
         {/* App screens */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -112,6 +116,13 @@ function RootNavigator() {
             presentation: 'modal',
           }}
         />
+        <Stack.Screen
+          name="planner"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
@@ -120,10 +131,14 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <RootNavigator />
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <RootNavigator />
+          </ToastProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

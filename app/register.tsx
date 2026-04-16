@@ -3,13 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,28 +15,31 @@ import { useRouter } from 'expo-router';
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRegister } from '@/features/auth/hooks/use-auth';
+import { useToast } from '@/shared/hooks/use-toast';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 
 export default function RegisterScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const toast = useToast();
   const register = useRegister();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const validate = (): boolean => {
     const next: Record<string, string | undefined> = {};
-    if (!name.trim()) next.name = 'Name is required';
-    if (!email.trim()) next.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Enter a valid email';
-    if (!password) next.password = 'Password is required';
-    else if (password.length < 8) next.password = 'Minimum 8 characters';
-    if (password !== confirmPassword) next.confirm = 'Passwords do not match';
+    if (!name.trim()) next.name = 'El nombre es requerido';
+    if (!email.trim()) next.email = 'El email es requerido';
+    else if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Ingresá un email válido';
+    if (!password) next.password = 'La contraseña es requerida';
+    else if (password.length < 8) next.password = 'Mínimo 8 caracteres';
+    if (password !== confirmPassword) next.confirm = 'Las contraseñas no coinciden';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -53,9 +53,11 @@ export default function RegisterScreen() {
         onSuccess: () => {
           router.replace('/(tabs)');
         },
-        onError: (err: any) => {
-          const detail = err?.body?.detail ?? 'Registration failed. Try again.';
-          Alert.alert('Error', detail);
+        onError: (err: unknown) => {
+          const detail =
+            (err as { body?: { detail?: string } })?.body?.detail ??
+            'Error al registrarse. Intentá de nuevo.';
+          toast.error(detail);
         },
       },
     );
@@ -84,110 +86,59 @@ export default function RegisterScreen() {
             <View style={[styles.logoCircle, { backgroundColor: `${colors.primary}18` }]}>
               <MaterialIcons name="spa" size={40} color={colors.primary} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Crear cuenta</Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              Start your mindful nourishment journey
+              Empezá tu camino hacia una nutrición consciente
             </Text>
           </View>
 
           {/* Form Card */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, ...Shadows.soft }]}>
             {/* Name */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>FULL NAME</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.background, borderColor: errors.name ? colors.error : colors.border },
-                ]}
-              >
-                <MaterialIcons name="person-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Jane Doe"
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="words"
-                  value={name}
-                  onChangeText={(t) => { setName(t); setErrors((e) => ({ ...e, name: undefined })); }}
-                />
-              </View>
-              {errors.name && <Text style={[styles.errorText, { color: colors.error }]}>{errors.name}</Text>}
-            </View>
+            <Input
+              label="NOMBRE COMPLETO"
+              placeholder="Jane Doe"
+              value={name}
+              onChangeText={(t) => { setName(t); setErrors((e) => ({ ...e, name: undefined })); }}
+              error={errors.name}
+              autoCapitalize="words"
+              prefix={<MaterialIcons name="person-outline" size={20} color={colors.textMuted} />}
+            />
 
             {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>EMAIL</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.background, borderColor: errors.email ? colors.error : colors.border },
-                ]}
-              >
-                <MaterialIcons name="mail-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="you@example.com"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={email}
-                  onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
-                />
-              </View>
-              {errors.email && <Text style={[styles.errorText, { color: colors.error }]}>{errors.email}</Text>}
-            </View>
+            <Input
+              label="EMAIL"
+              placeholder="vos@ejemplo.com"
+              value={email}
+              onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              prefix={<MaterialIcons name="mail-outline" size={20} color={colors.textMuted} />}
+            />
 
             {/* Password */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>PASSWORD</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.background, borderColor: errors.password ? colors.error : colors.border },
-                ]}
-              >
-                <MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <MaterialIcons
-                    name={showPassword ? 'visibility' : 'visibility-off'}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-              </View>
-              {errors.password && <Text style={[styles.errorText, { color: colors.error }]}>{errors.password}</Text>}
-            </View>
+            <Input
+              label="CONTRASEÑA"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
+              error={errors.password}
+              secureTextEntry
+              prefix={<MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />}
+            />
 
             {/* Confirm Password */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>CONFIRM PASSWORD</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.background, borderColor: errors.confirm ? colors.error : colors.border },
-                ]}
-              >
-                <MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  value={confirmPassword}
-                  onChangeText={(t) => { setConfirmPassword(t); setErrors((e) => ({ ...e, confirm: undefined })); }}
-                />
-              </View>
-              {errors.confirm && <Text style={[styles.errorText, { color: colors.error }]}>{errors.confirm}</Text>}
-            </View>
+            <Input
+              label="CONFIRMAR CONTRASEÑA"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChangeText={(t) => { setConfirmPassword(t); setErrors((e) => ({ ...e, confirm: undefined })); }}
+              error={errors.confirm}
+              secureTextEntry
+              prefix={<MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />}
+            />
 
             {/* Password hint */}
             <View style={styles.hintRow}>
@@ -202,27 +153,20 @@ export default function RegisterScreen() {
                   { color: password.length >= 8 ? colors.primary : colors.textMuted },
                 ]}
               >
-                At least 8 characters
+                Al menos 8 caracteres
               </Text>
             </View>
 
             {/* Register Button */}
-            <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                { backgroundColor: colors.primary },
-                register.isPending && { opacity: 0.7 },
-              ]}
+            <Button
+              variant="primary"
+              size="lg"
+              loading={register.isPending}
               onPress={handleRegister}
-              disabled={register.isPending}
-              activeOpacity={0.8}
+              style={styles.submitBtn}
             >
-              {register.isPending ? (
-                <ActivityIndicator color="#FFF" size="small" />
-              ) : (
-                <Text style={styles.submitText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
+              Crear cuenta
+            </Button>
           </View>
 
           {/* Already have account */}
@@ -231,16 +175,16 @@ export default function RegisterScreen() {
             style={styles.loginLink}
           >
             <Text style={[styles.loginText, { color: colors.textMuted }]}>
-              Already have an account?{' '}
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>Log In</Text>
+              ¿Ya tenés cuenta?{' '}
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>Iniciar sesión</Text>
             </Text>
           </TouchableOpacity>
 
           {/* Terms */}
           <Text style={[styles.terms, { color: colors.textMuted }]}>
-            By creating an account you agree to our{' '}
-            <Text style={{ fontWeight: '600' }}>Terms of Service</Text> and{' '}
-            <Text style={{ fontWeight: '600' }}>Privacy Policy</Text>
+            Al crear una cuenta aceptás nuestros{' '}
+            <Text style={{ fontWeight: '600' }}>Términos de Servicio</Text> y{' '}
+            <Text style={{ fontWeight: '600' }}>Política de Privacidad</Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -290,29 +234,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  fieldGroup: { gap: 6 },
-  label: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1.5,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: 14,
-    height: 52,
-  },
-  input: {
-    flex: 1,
-    fontSize: FontSize.base,
-    fontWeight: '500',
-  },
-  errorText: { fontSize: FontSize.xs, fontWeight: '500', marginTop: 2 },
-
   hintRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -321,18 +242,7 @@ const styles = StyleSheet.create({
   },
   hintText: { fontSize: FontSize.xs, fontWeight: '500' },
 
-  submitBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 54,
-    borderRadius: BorderRadius.lg,
-    marginTop: 4,
-  },
-  submitText: {
-    color: '#FFF',
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-  },
+  submitBtn: { marginTop: 4 },
 
   loginLink: {
     alignItems: 'center',

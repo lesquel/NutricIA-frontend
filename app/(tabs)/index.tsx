@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { Colors, Shadows, FontSize } from '@/constants/theme';
+import { Colors, Shadows, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DateSelector } from '@/shared/components/date-selector';
 import { MealCard } from '@/shared/components/meal-card';
@@ -13,6 +13,7 @@ import { NourishmentRing } from '@/features/dashboard/components/nourishment-rin
 import { useDailySummary, useDailyMeals } from '@/features/dashboard/hooks/use-dashboard';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useWaterLog } from '@/features/garden/hooks/use-garden';
+import { useCurrentPlan } from '@/features/planner/hooks/use-current-plan';
 
 export default function DashboardScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -23,6 +24,7 @@ export default function DashboardScreen() {
   const { data: summary, isLoading: summaryLoading } = useDailySummary();
   const { data: meals, isLoading: mealsLoading } = useDailyMeals();
   const { data: waterLog } = useWaterLog();
+  const { data: currentPlan } = useCurrentPlan();
 
   const totalCalories = summary?.total_calories ?? 0;
   const proteinTotal = summary?.total_protein ?? 0;
@@ -118,6 +120,83 @@ export default function DashboardScreen() {
               No meals logged yet — tap to scan your first meal
             </Text>
           </TouchableOpacity>
+        )}
+
+        {/* Planner Widget */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Plan de la semana</Text>
+          <TouchableOpacity onPress={() => router.push('/planner')}>
+            <Text style={[styles.viewAll, { color: colors.primary }]}>Ver semana</Text>
+          </TouchableOpacity>
+        </View>
+
+        {!currentPlan ? (
+          <TouchableOpacity
+            onPress={() => router.push('/planner')}
+            style={[styles.plannerEmptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <MaterialIcons name="calendar-today" size={28} color={colors.primary} />
+            <View style={styles.plannerEmptyText}>
+              <Text style={[styles.plannerEmptyTitle, { color: colors.text }]}>
+                Aún no tenés un plan
+              </Text>
+              <Text style={[styles.plannerEmptySubtitle, { color: colors.textMuted }]}>
+                Generá tu plan semanal personalizado
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.plannerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {(() => {
+              const today = new Date();
+              const todayDow = (today.getDay() + 6) % 7; // Mon=0..Sun=6
+              const todayMeals = currentPlan.meals.filter((m) => m.day_of_week === todayDow);
+              const MEAL_LABELS: Record<string, string> = {
+                breakfast: 'Desayuno',
+                lunch: 'Almuerzo',
+                snack: 'Merienda',
+                dinner: 'Cena',
+              };
+              return (
+                <>
+                  {todayMeals.length === 0 ? (
+                    <Text style={[styles.plannerNoMeals, { color: colors.textMuted }]}>
+                      No hay comidas planificadas para hoy
+                    </Text>
+                  ) : (
+                    todayMeals.slice(0, 4).map((meal) => (
+                      <View key={meal.id} style={[styles.plannerMealRow, { borderBottomColor: colors.border }]}>
+                        <View style={styles.plannerMealLeft}>
+                          <Text style={[styles.plannerMealType, { color: colors.textMuted }]}>
+                            {MEAL_LABELS[meal.meal_type] ?? meal.meal_type}
+                          </Text>
+                          <Text style={[styles.plannerMealName, { color: colors.text }]} numberOfLines={1}>
+                            {meal.recipe_name}
+                          </Text>
+                        </View>
+                        <View style={styles.plannerMealRight}>
+                          <Text style={[styles.plannerMealCal, { color: colors.calorieOrange }]}>
+                            {meal.calories} kcal
+                          </Text>
+                          {meal.is_logged && (
+                            <MaterialIcons name="check-circle" size={14} color={colors.success} />
+                          )}
+                        </View>
+                      </View>
+                    ))
+                  )}
+                  <TouchableOpacity
+                    style={[styles.plannerViewAll, { borderTopColor: colors.border }]}
+                    onPress={() => router.push('/planner')}
+                  >
+                    <Text style={[styles.plannerViewAllText, { color: colors.primary }]}>Ver semana completa</Text>
+                    <MaterialIcons name="chevron-right" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
+          </View>
         )}
 
         <View style={{ height: 120 }} />
@@ -218,6 +297,47 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   emptyText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 },
+  plannerEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginHorizontal: 24,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: 16,
+  },
+  plannerEmptyText: { flex: 1 },
+  plannerEmptyTitle: { fontSize: FontSize.base, fontWeight: '700' },
+  plannerEmptySubtitle: { fontSize: FontSize.xs, fontWeight: '500', marginTop: 2 },
+  plannerCard: {
+    marginHorizontal: 24,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  plannerMealRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  plannerMealLeft: { flex: 1 },
+  plannerMealType: { fontSize: FontSize.xs, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  plannerMealName: { fontSize: FontSize.sm, fontWeight: '600', marginTop: 1 },
+  plannerMealRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  plannerMealCal: { fontSize: FontSize.xs, fontWeight: '700' },
+  plannerNoMeals: { fontSize: FontSize.sm, textAlign: 'center', padding: 16 },
+  plannerViewAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  plannerViewAllText: { fontSize: FontSize.sm, fontWeight: '600' },
   fab: {
     position: 'absolute',
     bottom: 100,

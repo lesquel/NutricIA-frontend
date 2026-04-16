@@ -3,13 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,26 +18,29 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEmailLogin } from '@/features/auth/hooks/use-auth';
 import { useGoogleAuth } from '@/features/auth/hooks/use-google-auth';
 import { useAppleAuth } from '@/features/auth/hooks/use-apple-auth';
+import { useToast } from '@/shared/hooks/use-toast';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const toast = useToast();
   const emailLogin = useEmailLogin();
   const { loginWithGoogle, isPending: googlePending } = useGoogleAuth();
-  const { loginWithApple, isPending: applePending, isAvailable: appleAvailable } = useAppleAuth();
+  const { loginWithApple, isPending: applePending } = useAppleAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!email.trim()) next.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Enter a valid email';
-    if (!password) next.password = 'Password is required';
-    else if (password.length < 8) next.password = 'Min 8 characters';
+    if (!email.trim()) next.email = 'El email es requerido';
+    else if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Ingresá un email válido';
+    if (!password) next.password = 'La contraseña es requerida';
+    else if (password.length < 8) next.password = 'Mínimo 8 caracteres';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -53,9 +54,11 @@ export default function LoginScreen() {
         onSuccess: () => {
           router.replace('/(tabs)');
         },
-        onError: (err: any) => {
-          const detail = err?.body?.detail ?? 'Invalid email or password.';
-          Alert.alert('Login Failed', detail);
+        onError: (err: unknown) => {
+          const detail =
+            (err as { body?: { detail?: string } })?.body?.detail ??
+            'Credenciales incorrectas';
+          toast.error(detail);
         },
       },
     );
@@ -85,91 +88,60 @@ export default function LoginScreen() {
 
           {/* Form Card */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, ...Shadows.soft }]}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>Welcome Back</Text>
+            <Text style={[styles.formTitle, { color: colors.text }]}>Bienvenido de vuelta</Text>
             <Text style={[styles.formSubtitle, { color: colors.textMuted }]}>
-              Sign in to continue your journey
+              Iniciá sesión para continuar tu camino
             </Text>
 
             {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>EMAIL</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.background, borderColor: errors.email ? colors.error : colors.border },
-                ]}
-              >
-                <MaterialIcons name="mail-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="you@example.com"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={email}
-                  onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
-                />
-              </View>
-              {errors.email && <Text style={[styles.errorText, { color: colors.error }]}>{errors.email}</Text>}
-            </View>
+            <Input
+              label="EMAIL"
+              placeholder="vos@ejemplo.com"
+              value={email}
+              onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              prefix={<MaterialIcons name="mail-outline" size={20} color={colors.textMuted} />}
+            />
 
             {/* Password */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>PASSWORD</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.background, borderColor: errors.password ? colors.error : colors.border },
-                ]}
-              >
-                <MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <MaterialIcons
-                    name={showPassword ? 'visibility' : 'visibility-off'}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-              </View>
-              {errors.password && <Text style={[styles.errorText, { color: colors.error }]}>{errors.password}</Text>}
-            </View>
+            <Input
+              label="CONTRASEÑA"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
+              error={errors.password}
+              secureTextEntry
+              prefix={<MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />}
+            />
 
             {/* Forgot Password */}
-            <TouchableOpacity style={styles.forgotBtn}>
-              <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot Password?</Text>
+            <TouchableOpacity
+              style={styles.forgotBtn}
+              onPress={() => router.push('/forgot-password')}
+            >
+              <Text style={[styles.forgotText, { color: colors.primary }]}>
+                ¿Olvidaste tu contraseña?
+              </Text>
             </TouchableOpacity>
 
             {/* Login Button */}
-            <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                { backgroundColor: colors.primary },
-                emailLogin.isPending && { opacity: 0.7 },
-              ]}
+            <Button
+              variant="primary"
+              size="lg"
+              loading={emailLogin.isPending}
               onPress={handleLogin}
-              disabled={emailLogin.isPending}
-              activeOpacity={0.8}
+              style={styles.submitBtn}
             >
-              {emailLogin.isPending ? (
-                <ActivityIndicator color="#FFF" size="small" />
-              ) : (
-                <Text style={styles.submitText}>Log In</Text>
-              )}
-            </TouchableOpacity>
+              Iniciar sesión
+            </Button>
 
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textMuted }]}>or</Text>
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>o</Text>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
             </View>
 
@@ -214,8 +186,8 @@ export default function LoginScreen() {
             style={styles.registerLink}
           >
             <Text style={[styles.registerText, { color: colors.textMuted }]}>
-              Don&apos;t have an account?{' '}
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>Create One</Text>
+              ¿No tenés cuenta?{' '}
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>Crear cuenta</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -259,44 +231,10 @@ const styles = StyleSheet.create({
   formTitle: { fontSize: FontSize['2xl'], fontWeight: '700' },
   formSubtitle: { fontSize: FontSize.sm, marginTop: -8 },
 
-  fieldGroup: { gap: 6 },
-  label: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1.5,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: 14,
-    height: 52,
-  },
-  input: {
-    flex: 1,
-    fontSize: FontSize.base,
-    fontWeight: '500',
-  },
-  errorText: { fontSize: FontSize.xs, fontWeight: '500', marginTop: 2 },
-
   forgotBtn: { alignSelf: 'flex-end', marginTop: -4 },
   forgotText: { fontSize: FontSize.sm, fontWeight: '600' },
 
-  submitBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 54,
-    borderRadius: BorderRadius.lg,
-    marginTop: 4,
-  },
-  submitText: {
-    color: '#FFF',
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-  },
+  submitBtn: { marginTop: 4 },
 
   // Divider
   dividerRow: {

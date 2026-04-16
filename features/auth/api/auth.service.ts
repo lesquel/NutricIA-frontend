@@ -4,7 +4,12 @@
 
 import { storage } from '@/shared/lib/storage';
 import { apiClient } from '@/shared/api/client';
-import type { TokenResponse, UserProfile } from '@/shared/types/api';
+import type {
+  TokenResponse,
+  UserProfile,
+  ForgotPasswordResponse,
+  ResetPasswordResponse,
+} from '@/shared/types/api';
 import { useAuthStore } from '../store/auth.store';
 
 // ── Email / Password ────────────────────────
@@ -75,4 +80,25 @@ export async function fetchCurrentUser(): Promise<UserProfile> {
 export async function logout(): Promise<void> {
   await storage.deleteItem('auth_token');
   await storage.deleteItem('refresh_token');
+}
+
+// ── Password Reset ──────────────────────────
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  return apiClient.post<ForgotPasswordResponse>(
+    '/auth/forgot-password',
+    { email },
+    { skipAuth: true },
+  );
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<ResetPasswordResponse> {
+  return apiClient.post<ResetPasswordResponse>(
+    '/auth/reset-password',
+    { token, new_password: newPassword },
+    { skipAuth: true },
+  );
 }

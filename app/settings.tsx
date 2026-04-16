@@ -24,6 +24,7 @@ import { resolveMediaUrl } from '../shared/lib/media-url';
 import { useUserSettings, useUpdateProfile, useUploadAvatar, useDeleteAvatar, useUpdateGoals, useUpdateDietaryPreferences, useDeleteAccount } from '@/features/settings/hooks/use-settings';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useLogout } from '@/features/auth/hooks/use-auth';
+import { useToast } from '@/shared/hooks/use-toast';
 
 const DIET_TAGS = [
   'Vegan',
@@ -59,6 +60,7 @@ export default function SettingsScreen() {
   const updateDietaryPrefs = useUpdateDietaryPreferences();
   const logoutMutation = useLogout();
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const toast = useToast();
 
   const [calorieGoal, setCalorieGoal] = useState(user?.calorie_goal ?? 2100);
   const [waterGoal, setWaterGoal] = useState(user?.water_goal_ml ?? 2500);
@@ -144,7 +146,7 @@ export default function SettingsScreen() {
                 router.replace('/login');
               },
               onError: () => {
-                Alert.alert('Error', 'Could not delete account. Please try again.');
+                toast.error('No se pudo eliminar la cuenta. Intentá de nuevo.');
               },
             });
           },
@@ -162,7 +164,7 @@ export default function SettingsScreen() {
       await logoutMutation.mutateAsync();
       router.replace('/login');
     } catch {
-      Alert.alert('Error', 'Could not sign out. Please try again.');
+      toast.error('No se pudo cerrar sesión. Intentá de nuevo.');
     }
   };
 

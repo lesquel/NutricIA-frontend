@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Alert,
   Modal,
   ScrollView,
   ActivityIndicator,
@@ -18,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useScanFood, useSaveMeal } from '@/features/scanner/hooks/use-scan-food';
 import { ApiError } from '@/shared/api/client';
+import { useToast } from '@/shared/hooks/use-toast';
 import type { ScanResult, MealType } from '@/shared/types/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -44,6 +44,7 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 
 export default function ScanScreen() {
   const router = useRouter();
+  const toast = useToast();
   const [permission, requestPermission] = useCameraPermissions();
   const [flash, setFlash] = useState(false);
   const cameraRef = useRef<CameraView>(null);
@@ -100,14 +101,11 @@ export default function ScanScreen() {
           setShowResults(true);
         },
         onError: (error) => {
-          Alert.alert(
-            'Scan Failed',
-            getApiErrorMessage(error, 'Could not analyze the image. Please try again.'),
-          );
+          toast.error(getApiErrorMessage(error, 'No se pudo analizar la imagen. Intentá de nuevo.'));
         },
       });
     } catch (error) {
-      Alert.alert('Error', 'Failed to capture photo. Please try again.');
+      toast.error('Error al capturar la foto. Intentá de nuevo.');
     }
   };
 
@@ -138,14 +136,11 @@ export default function ScanScreen() {
           setShowResults(true);
         },
         onError: (error) => {
-          Alert.alert(
-            'Scan Failed',
-            getApiErrorMessage(error, 'Could not analyze the image. Please try again.'),
-          );
+          toast.error(getApiErrorMessage(error, 'No se pudo analizar la imagen. Intentá de nuevo.'));
         },
       });
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      toast.error('Error al seleccionar la imagen. Intentá de nuevo.');
     }
   };
 
@@ -169,15 +164,10 @@ export default function ScanScreen() {
           setShowResults(false);
           setScanResult(null);
           setPhotoUri(null);
-          Alert.alert('Saved!', 'Meal has been logged to your journal.', [
-            { text: 'OK' },
-          ]);
+          toast.success('Comida guardada en tu diario.');
         },
         onError: (error) => {
-          Alert.alert(
-            'Save Failed',
-            getApiErrorMessage(error, 'Failed to save meal. Please try again.'),
-          );
+          toast.error(getApiErrorMessage(error, 'Error al guardar la comida. Intentá de nuevo.'));
         },
       }
     );
