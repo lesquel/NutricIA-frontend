@@ -14,6 +14,8 @@ import { useAuthStore, hydrateAuthStore } from '@/features/auth/store/auth.store
 import { ErrorBoundary } from '@/shared/components/error-boundary';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { ToastProvider } from '@/shared/components/ui/ToastProvider';
+import '@/shared/i18n';
+import { hydrateLanguageStore } from '@/shared/store/language.store';
 
 // Custom themes matching NutricIA palette
 const NutricIALight = {
@@ -52,6 +54,7 @@ function RootNavigator() {
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasOnboarded = useAuthStore((s) => s.hasOnboarded);
+  const hasConfiguredProfile = useAuthStore((s) => s.hasConfiguredProfile);
   const hydrated = useAuthStore((s) => s._hydrated);
 
   // Try to restore session on mount
@@ -60,6 +63,7 @@ function RootNavigator() {
   // Hydrate persisted flags from SecureStore on mount
   useEffect(() => {
     hydrateAuthStore();
+    hydrateLanguageStore();
   }, []);
 
   // Route guard — don't wait for checkingAuth if we already have a user
@@ -69,9 +73,12 @@ function RootNavigator() {
     if (!ready) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register' || segments[0] === 'welcome';
+    // expo-router's generated types may not yet include new app-dir segments on
+    // first compile; compare via a widened string cast so TS accepts it.
+    const inOnboardingGroup = (segments[0] as string) === 'onboarding';
 
     if (!hasOnboarded) {
-      // First-time user → onboarding
+      // First-time user → marketing slides
       if (segments[0] !== 'welcome') {
         router.replace('/welcome');
       }
@@ -80,13 +87,18 @@ function RootNavigator() {
       if (!inAuthGroup) {
         router.replace('/login');
       }
+    } else if (!hasConfiguredProfile) {
+      // Authenticated but hasn't configured preferences yet → onboarding
+      if (!inOnboardingGroup) {
+        router.replace('/onboarding/basics' as never);
+      }
     } else {
-      // Authenticated → go to app
-      if (inAuthGroup) {
+      // Authenticated and configured → go to app
+      if (inAuthGroup || inOnboardingGroup) {
         router.replace('/(tabs)');
       }
     }
-  }, [ready, isAuthenticated, hasOnboarded, segments]);
+  }, [ready, isAuthenticated, hasOnboarded, hasConfiguredProfile, segments]);
 
   // Show loading while hydrating store + checking token (skip if already authenticated)
   if (!ready) {
@@ -106,6 +118,9 @@ function RootNavigator() {
         <Stack.Screen name="register" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="reset-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
+
+        {/* Onboarding (post-signup profile config) */}
+        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'slide_from_right' }} />
 
         {/* App screens */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

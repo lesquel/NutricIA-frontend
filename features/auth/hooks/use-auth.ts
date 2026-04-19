@@ -37,11 +37,15 @@ export function useCurrentUser() {
 
 export function useRegister() {
   const qc = useQueryClient();
+  const resetProfileConfig = useAuthStore((s) => s.resetProfileConfig);
 
   return useMutation({
     mutationFn: ({ email, password, name }: { email: string; password: string; name: string }) =>
       registerWithEmail(email, password, name),
     onSuccess: () => {
+      // New users haven't configured their preferences yet — force them
+      // through the 2-step onboarding flow after the first login.
+      resetProfileConfig();
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
   });
