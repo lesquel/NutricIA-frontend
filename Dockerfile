@@ -15,8 +15,8 @@ RUN apt-get update && \
 # Copy dependency files first for layer caching
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies deterministically (uses package-lock.json)
+RUN npm ci
 
 # Copy application code
 COPY . .
