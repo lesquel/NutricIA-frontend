@@ -24,6 +24,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, FontSize, Spacing, type ThemeColors } from '@/constants/theme';
@@ -92,6 +93,9 @@ export default function RecipesScreen() {
 
   const { messages, sendMessage, status, reset, loadConversation, conversationId } = useRecipeChat();
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Tab bar is absolutely positioned (height 80) — reserve space so the
+  // ChatComposer sits above it instead of being hidden behind.
+  const tabBarHeight = useBottomTabBarHeight();
 
   const flatListRef = useRef<FlatList<LocalMessage>>(null);
 
@@ -184,7 +188,9 @@ export default function RecipesScreen() {
           />
         )}
 
-        <ChatComposer onSend={sendMessage} disabled={isStreaming} initialValue={prompt} />
+        <View style={{ paddingBottom: tabBarHeight }}>
+          <ChatComposer onSend={sendMessage} disabled={isStreaming} initialValue={prompt} />
+        </View>
       </KeyboardAvoidingView>
 
       <ConversationHistoryModal

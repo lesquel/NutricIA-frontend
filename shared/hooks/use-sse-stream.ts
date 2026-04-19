@@ -10,6 +10,7 @@
  */
 
 import { useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { storage } from '@/shared/lib/storage';
 import { API_BASE_URL } from '@/constants/api';
 
@@ -92,9 +93,18 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
           setEvents((prev) => [...prev, event]);
         };
 
-        // Prefer streaming reader (available in Hermes ≥ 0.73 and web)
-        if (response.body && typeof response.body.getReader === 'function') {
-          const reader = response.body.getReader();
+        // React Native's fetch exposes response.body with a getReader() on
+        // Hermes, but reads can hang indefinitely on Android. Use the streaming
+        // path only on web where it's reliable, and fall back to text() on
+        // native — the full response arrives at once instead of token-by-token,
+        // which is acceptable and at least actually works.
+        const canStream =
+          Platform.OS === 'web' &&
+          !!response.body &&
+          typeof response.body.getReader === 'function';
+
+        if (canStream) {
+          const reader = response.body!.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
 
@@ -116,7 +126,8 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
             parseSSEChunk<T>(buffer, addEvent);
           }
         } else {
-          // Fallback: accumulate full text (no streaming UI — loses token-by-token)
+          // Fallback: accumulate full text (no token-by-token animation, but
+          // works reliably on React Native where streaming readers are flaky).
           const text = await response.text();
           parseSSEChunk<T>(text, addEvent);
         }
