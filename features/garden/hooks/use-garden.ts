@@ -8,6 +8,7 @@ import {
   fetchHabits,
   createHabit,
   checkInHabit,
+  deleteHabit,
   fetchWaterLog,
   logWater,
 } from '../api/garden.service';
@@ -33,6 +34,15 @@ export function useCheckInHabit() {
 
   return useMutation({
     mutationFn: (habitId: string) => checkInHabit(habitId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['habits'] }),
+  });
+}
+
+export function useDeleteHabit() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (habitId: string) => deleteHabit(habitId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['habits'] }),
   });
 }

@@ -31,6 +31,8 @@ export interface UseRecipeChatResult {
   conversationId: string | null;
   /** Reset conversation — clears messages and conversationId */
   reset: () => void;
+  /** Load an existing conversation by id (replaces current messages). */
+  loadConversation: (id: string) => Promise<void>;
 }
 
 let _localIdCounter = 0;
@@ -147,11 +149,39 @@ export function useRecipeChat(): UseRecipeChatResult {
     assistantMsgIdRef.current = null;
   }
 
+  async function loadConversation(id: string) {
+    sse.stop();
+    assistantMsgIdRef.current = null;
+    setConversationId(id);
+    try {
+      // Fetch the full history — high limit because we show everything.
+      const res = await chatService.getMessages(id, 500, 0);
+      // Server returns newest-first or oldest-first depending on impl; sort
+      // defensively by created_at ascending so the chat reads top-to-bottom.
+      const sorted = [...res.items].sort((a, b) =>
+        a.created_at.localeCompare(b.created_at),
+      );
+      setMessages(
+        sorted.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          recipes: (m.metadata?.recipes as RecipeCard[] | undefined) ?? undefined,
+        })),
+      );
+    } catch {
+      // Leave the conversation selected but empty — user can send a message
+      // to fall back on the server for retrieval.
+      setMessages([]);
+    }
+  }
+
   return {
     messages,
     sendMessage,
     status: sse.status,
     conversationId,
     reset,
+    loadConversation,
   };
 }

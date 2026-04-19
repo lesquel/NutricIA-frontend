@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,8 +15,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useHabits, useCheckInHabit, useWaterLog, useLogWater } from '@/features/garden/hooks/use-garden';
+import {
+  useHabits,
+  useCheckInHabit,
+  useDeleteHabit,
+  useWaterLog,
+  useLogWater,
+} from '@/features/garden/hooks/use-garden';
 import { DateSelector } from '@/shared/components/date-selector';
+import { useDateStore, formatDateParam } from '@/shared/store/date.store';
 import type { HabitResponse, PlantState } from '@/shared/types/api';
 import { PLANT_EMOJI, HABIT_SUGGESTIONS } from '@/features/garden/constants';
 import { CreateHabitModal } from '@/features/garden/components/CreateHabitModal';
@@ -32,15 +40,39 @@ export default function GardenScreen() {
   const { data: waterLog, isLoading: waterLoading } = useWaterLog();
   const logWater = useLogWater();
   const checkInHabit = useCheckInHabit();
+  const deleteHabit = useDeleteHabit();
+
+  const selectedDate = useDateStore((s) => s.selectedDate);
+  const todayKey = formatDateParam(new Date());
+  const selectedKey = formatDateParam(selectedDate);
+  const isToday = selectedKey === todayKey;
+  const isPast = selectedKey < todayKey;
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalInitialName, setModalInitialName] = useState<string>('');
   const [modalInitialPlant, setModalInitialPlant] = useState<string | undefined>(undefined);
 
   function openCreateModal(name = '', plantType?: string) {
+    if (!isToday) return;
     setModalInitialName(name);
     setModalInitialPlant(plantType);
     setModalVisible(true);
+  }
+
+  function confirmDeleteHabit(habit: HabitResponse) {
+    if (!isToday) return;
+    Alert.alert(
+      t('tabs.garden.deleteHabitTitle'),
+      t('tabs.garden.deleteHabitMessage', { name: habit.name }),
+      [
+        { text: t('tabs.garden.createHabitCancel'), style: 'cancel' },
+        {
+          text: t('tabs.garden.deleteHabitConfirm'),
+          style: 'destructive',
+          onPress: () => deleteHabit.mutate(habit.id),
+        },
+      ],
+    );
   }
 
   const cups = waterLog?.cups ?? 0;
@@ -74,6 +106,25 @@ export default function GardenScreen() {
       <DateSelector />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {!isToday && (
+          <View
+            style={[
+              styles.readOnlyBanner,
+              {
+                backgroundColor: colors.warning + '1F',
+                borderColor: colors.warning,
+              },
+            ]}
+          >
+            <MaterialIcons name="lock-outline" size={18} color={colors.warning} />
+            <Text style={[styles.readOnlyText, { color: colors.text }]}>
+              {isPast
+                ? t('tabs.garden.readOnlyPast')
+                : t('tabs.garden.readOnlyFuture')}
+            </Text>
+          </View>
+        )}
+
         {/* Intro explainer */}
         <View
           style={[
@@ -113,12 +164,14 @@ export default function GardenScreen() {
                 return (
                   <TouchableOpacity
                     key={i}
-                    onPress={() => toggleCup(i)}
+                    onPress={() => (isToday ? toggleCup(i) : undefined)}
+                    disabled={!isToday}
                     style={[
                       styles.cupBtn,
                       {
                         backgroundColor: filled ? colors.waterBlue : colors.background,
                         borderColor: filled ? colors.waterBlue : colors.border,
+                        opacity: isToday ? 1 : 0.55,
                       },
                     ]}
                     activeOpacity={0.7}
@@ -220,26 +273,30 @@ export default function GardenScreen() {
                 habit={habit}
                 colors={colors}
                 colorScheme={colorScheme}
-                onCheckIn={() => checkInHabit.mutate(habit.id)}
+                readOnly={!isToday}
+                onCheckIn={() => isToday && checkInHabit.mutate(habit.id)}
+                onDelete={() => confirmDeleteHabit(habit)}
               />
             ))}
-            {/* Add New Habit Card */}
-            <TouchableOpacity
-              style={[
-                styles.addCard,
-                { borderColor: colors.border, backgroundColor: colors.background },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => openCreateModal()}
-            >
-              <View
-                style={[styles.addIconCircle, { backgroundColor: colors.surface }]}
+            {/* Add New Habit Card — only interactive today */}
+            {isToday && (
+              <TouchableOpacity
+                style={[
+                  styles.addCard,
+                  { borderColor: colors.border, backgroundColor: colors.background },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => openCreateModal()}
               >
-                <MaterialIcons name="add" size={28} color={colors.textMuted} />
-              </View>
-              <Text style={[styles.addTitle, { color: colors.textMuted }]}>{t('tabs.garden.plantNewSeed')}</Text>
-              <Text style={[styles.addSub, { color: colors.textMuted }]}>{t('tabs.garden.startNewHabit')}</Text>
-            </TouchableOpacity>
+                <View
+                  style={[styles.addIconCircle, { backgroundColor: colors.surface }]}
+                >
+                  <MaterialIcons name="add" size={28} color={colors.textMuted} />
+                </View>
+                <Text style={[styles.addTitle, { color: colors.textMuted }]}>{t('tabs.garden.plantNewSeed')}</Text>
+                <Text style={[styles.addSub, { color: colors.textMuted }]}>{t('tabs.garden.startNewHabit')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -261,12 +318,16 @@ function PlantCard({
   habit,
   colors,
   colorScheme,
+  readOnly,
   onCheckIn,
+  onDelete,
 }: {
   habit: HabitResponse;
   colors: typeof Colors[keyof typeof Colors];
   colorScheme: 'light' | 'dark';
+  readOnly: boolean;
   onCheckIn: () => void;
+  onDelete: () => void;
 }) {
   const { t } = useTranslation();
   const streak = habit.streak_days;
@@ -284,6 +345,7 @@ function PlantCard({
           backgroundColor: colors.surface,
           borderColor: isWilted ? colors.warning : colors.border,
           borderWidth: isWilted ? 2 : 1,
+          opacity: readOnly ? 0.75 : 1,
         },
       ]}
     >
@@ -305,6 +367,18 @@ function PlantCard({
           <MaterialIcons name="warning" size={14} color={colors.error} />
           <Text style={[styles.badgeText, { color: colors.error }]}>{t('tabs.garden.badgeDry')}</Text>
         </View>
+      )}
+
+      {/* Delete button — only visible when editable */}
+      {!readOnly && (
+        <TouchableOpacity
+          onPress={onDelete}
+          style={[styles.deleteBtn, { backgroundColor: colors.background }]}
+          activeOpacity={0.7}
+          hitSlop={8}
+        >
+          <MaterialIcons name="delete-outline" size={16} color={colors.error} />
+        </TouchableOpacity>
       )}
 
       {/* Plant Emoji */}
@@ -330,14 +404,19 @@ function PlantCard({
       {isWilted ? (
         <TouchableOpacity
           style={[styles.reviveBtn, { backgroundColor: `${colors.waterBlue}15` }]}
-          activeOpacity={0.7}
-          onPress={onCheckIn}
+          activeOpacity={readOnly ? 1 : 0.7}
+          disabled={readOnly}
+          onPress={readOnly ? undefined : onCheckIn}
         >
           <MaterialIcons name="water-drop" size={14} color={colors.waterBlue} />
           <Text style={[styles.reviveText, { color: colors.waterBlue }]}>{t('tabs.garden.revive')}</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity onPress={!checkedToday ? onCheckIn : undefined} activeOpacity={checkedToday ? 1 : 0.7}>
+        <TouchableOpacity
+          onPress={!checkedToday && !readOnly ? onCheckIn : undefined}
+          activeOpacity={checkedToday || readOnly ? 1 : 0.7}
+          disabled={readOnly}
+        >
           <View style={styles.progressSection}>
             <View style={styles.progressLabelRow}>
               <Text style={[styles.progressLabelSmall, { color: colors.textMuted }]}>
@@ -571,6 +650,34 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 3,
+  },
+
+  readOnlyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  readOnlyText: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+  },
+  deleteBtn: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
   },
 
   // Revive

@@ -10,7 +10,7 @@
  * - Error toast on SSE failure
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,9 +19,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,7 @@ import { useRecipeChat } from '@/features/chat/hooks/use-recipe-chat';
 import { MessageBubble } from '@/features/chat/components/MessageBubble';
 import { ChatComposer } from '@/features/chat/components/ChatComposer';
 import { TypingIndicator } from '@/features/chat/components/TypingIndicator';
+import { ConversationHistoryModal } from '@/features/chat/components/ConversationHistoryModal';
 import type { LocalMessage } from '@/features/chat/hooks/use-recipe-chat';
 
 const SUGGESTED_PROMPT_KEYS = [
@@ -89,7 +90,8 @@ export default function RecipesScreen() {
   // planId + mealId are available for future swap_planned_meal tool integration
   const { prompt } = useLocalSearchParams<{ planId?: string; mealId?: string; prompt?: string }>();
 
-  const { messages, sendMessage, status, reset } = useRecipeChat();
+  const { messages, sendMessage, status, reset, loadConversation, conversationId } = useRecipeChat();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const flatListRef = useRef<FlatList<LocalMessage>>(null);
 
@@ -119,7 +121,10 @@ export default function RecipesScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <StatusBar
         barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
@@ -131,16 +136,26 @@ export default function RecipesScreen() {
           <MaterialIcons name="restaurant" size={22} color={colors.primary} />
           <Text style={[styles.headerTitle, { color: colors.text }]}>{t('tabs.recipes.title')}</Text>
         </View>
-        {hasMessages && (
+        <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.newChatButton, { borderColor: colors.border }]}
-            onPress={reset}
+            style={[styles.iconButton, { borderColor: colors.border }]}
+            onPress={() => setHistoryOpen(true)}
             activeOpacity={0.75}
+            accessibilityLabel={t('tabs.recipes.history')}
           >
-            <MaterialIcons name="add" size={18} color={colors.primary} />
-            <Text style={[styles.newChatLabel, { color: colors.primary }]}>{t('tabs.recipes.newChat')}</Text>
+            <MaterialIcons name="history" size={18} color={colors.primary} />
           </TouchableOpacity>
-        )}
+          {hasMessages && (
+            <TouchableOpacity
+              style={[styles.newChatButton, { borderColor: colors.border }]}
+              onPress={reset}
+              activeOpacity={0.75}
+            >
+              <MaterialIcons name="add" size={18} color={colors.primary} />
+              <Text style={[styles.newChatLabel, { color: colors.primary }]}>{t('tabs.recipes.newChat')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Chat area */}
@@ -171,6 +186,16 @@ export default function RecipesScreen() {
 
         <ChatComposer onSend={sendMessage} disabled={isStreaming} initialValue={prompt} />
       </KeyboardAvoidingView>
+
+      <ConversationHistoryModal
+        visible={historyOpen}
+        activeId={conversationId}
+        onClose={() => setHistoryOpen(false)}
+        onSelect={(id) => {
+          setHistoryOpen(false);
+          loadConversation(id);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -195,9 +220,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   headerTitle: {
     fontSize: FontSize.xl,
     fontWeight: '700',
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newChatButton: {
     flexDirection: 'row',
