@@ -10,7 +10,7 @@
  * - Error toast on SSE failure
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,11 +19,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, FontSize, Spacing, type ThemeColors } from '@/constants/theme';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -31,13 +33,14 @@ import { useRecipeChat } from '@/features/chat/hooks/use-recipe-chat';
 import { MessageBubble } from '@/features/chat/components/MessageBubble';
 import { ChatComposer } from '@/features/chat/components/ChatComposer';
 import { TypingIndicator } from '@/features/chat/components/TypingIndicator';
+import { ConversationHistoryModal } from '@/features/chat/components/ConversationHistoryModal';
 import type { LocalMessage } from '@/features/chat/hooks/use-recipe-chat';
 
-const SUGGESTED_PROMPTS = [
-  '¿Qué puedo cocinar con lo que comí esta semana?',
-  'Recomendame algo bajo en carbos para la cena',
-  'Dame ideas de almuerzo vegetariano',
-  '¿Cómo preparo una merienda alta en proteínas?',
+const SUGGESTED_PROMPT_KEYS = [
+  'tabs.recipes.suggested1',
+  'tabs.recipes.suggested2',
+  'tabs.recipes.suggested3',
+  'tabs.recipes.suggested4',
 ];
 
 function EmptyState({
@@ -47,34 +50,39 @@ function EmptyState({
   onPrompt: (text: string) => void;
   colors: ThemeColors;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIcon, { backgroundColor: colors.primary + '18' }]}>
         <MaterialIcons name="restaurant" size={40} color={colors.primary} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>Recetas IA</Text>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('tabs.recipes.title')}</Text>
       <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-        Contame qué tenés ganas de cocinar y te armo una receta personalizada.
+        {t('tabs.recipes.emptySubtitle')}
       </Text>
 
       <View style={styles.promptsContainer}>
-        {SUGGESTED_PROMPTS.map((prompt, i) => (
-          <TouchableOpacity
-            key={i}
-            style={[styles.promptChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => onPrompt(prompt)}
-            activeOpacity={0.75}
-          >
-            <Text style={[styles.promptText, { color: colors.text }]}>{prompt}</Text>
-            <MaterialIcons name="north-east" size={14} color={colors.primary} />
-          </TouchableOpacity>
-        ))}
+        {SUGGESTED_PROMPT_KEYS.map((key, i) => {
+          const prompt = t(key);
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[styles.promptChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => onPrompt(prompt)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.promptText, { color: colors.text }]}>{prompt}</Text>
+              <MaterialIcons name="north-east" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 export default function RecipesScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const toast = useToast();
@@ -83,14 +91,18 @@ export default function RecipesScreen() {
   // planId + mealId are available for future swap_planned_meal tool integration
   const { prompt } = useLocalSearchParams<{ planId?: string; mealId?: string; prompt?: string }>();
 
-  const { messages, sendMessage, status, reset } = useRecipeChat();
+  const { messages, sendMessage, status, reset, loadConversation, conversationId } = useRecipeChat();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // Tab bar is absolutely positioned (height 80) — reserve space so the
+  // ChatComposer sits above it instead of being hidden behind.
+  const tabBarHeight = useBottomTabBarHeight();
 
   const flatListRef = useRef<FlatList<LocalMessage>>(null);
 
   // Show error toast when SSE fails
   useEffect(() => {
     if (status === 'error') {
-      toast.error('No se pudo conectar con el asistente. Intentá de nuevo.');
+      toast.error(t('errors.chatConnection'));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
@@ -113,7 +125,10 @@ export default function RecipesScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
       <StatusBar
         barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
@@ -123,18 +138,28 @@ export default function RecipesScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
           <MaterialIcons name="restaurant" size={22} color={colors.primary} />
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Recetas IA</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('tabs.recipes.title')}</Text>
         </View>
-        {hasMessages && (
+        <View style={styles.headerActions}>
           <TouchableOpacity
-            style={[styles.newChatButton, { borderColor: colors.border }]}
-            onPress={reset}
+            style={[styles.iconButton, { borderColor: colors.border }]}
+            onPress={() => setHistoryOpen(true)}
             activeOpacity={0.75}
+            accessibilityLabel={t('tabs.recipes.history')}
           >
-            <MaterialIcons name="add" size={18} color={colors.primary} />
-            <Text style={[styles.newChatLabel, { color: colors.primary }]}>Nueva</Text>
+            <MaterialIcons name="history" size={18} color={colors.primary} />
           </TouchableOpacity>
-        )}
+          {hasMessages && (
+            <TouchableOpacity
+              style={[styles.newChatButton, { borderColor: colors.border }]}
+              onPress={reset}
+              activeOpacity={0.75}
+            >
+              <MaterialIcons name="add" size={18} color={colors.primary} />
+              <Text style={[styles.newChatLabel, { color: colors.primary }]}>{t('tabs.recipes.newChat')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Chat area */}
@@ -163,8 +188,20 @@ export default function RecipesScreen() {
           />
         )}
 
-        <ChatComposer onSend={sendMessage} disabled={isStreaming} initialValue={prompt} />
+        <View style={{ paddingBottom: tabBarHeight }}>
+          <ChatComposer onSend={sendMessage} disabled={isStreaming} initialValue={prompt} />
+        </View>
       </KeyboardAvoidingView>
+
+      <ConversationHistoryModal
+        visible={historyOpen}
+        activeId={conversationId}
+        onClose={() => setHistoryOpen(false)}
+        onSelect={(id) => {
+          setHistoryOpen(false);
+          loadConversation(id);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -189,9 +226,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   headerTitle: {
     fontSize: FontSize.xl,
     fontWeight: '700',
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newChatButton: {
     flexDirection: 'row',

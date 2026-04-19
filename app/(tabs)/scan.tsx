@@ -13,6 +13,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useScanFood, useSaveMeal } from '@/features/scanner/hooks/use-scan-food';
@@ -23,11 +24,11 @@ import type { ScanResult, MealType } from '@/shared/types/api';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const VIEWFINDER_SIZE = 280;
 
-const MEAL_TYPE_OPTIONS: { value: MealType; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { value: 'breakfast', label: 'Breakfast', icon: 'wb-sunny' },
-  { value: 'lunch', label: 'Lunch', icon: 'light-mode' },
-  { value: 'snack', label: 'Snack', icon: 'cookie' },
-  { value: 'dinner', label: 'Dinner', icon: 'nightlight-round' },
+const MEAL_TYPE_OPTIONS: { value: MealType; labelKey: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { value: 'breakfast', labelKey: 'tabs.scan.breakfast', icon: 'wb-sunny' },
+  { value: 'lunch', labelKey: 'tabs.scan.lunch', icon: 'light-mode' },
+  { value: 'snack', labelKey: 'tabs.scan.snack', icon: 'cookie' },
+  { value: 'dinner', labelKey: 'tabs.scan.dinner', icon: 'nightlight-round' },
 ];
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -43,6 +44,7 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function ScanScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const [permission, requestPermission] = useCameraPermissions();
@@ -65,12 +67,12 @@ export default function ScanScreen() {
     return (
       <View style={[styles.container, styles.permissionContainer]}>
         <MaterialIcons name="photo-camera" size={64} color="#FFF" />
-        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionTitle}>{t('tabs.scan.permissionTitle')}</Text>
         <Text style={styles.permissionText}>
-          NutricIA needs camera access to scan your meals and analyze nutritional content.
+          {t('tabs.scan.permissionText')}
         </Text>
         <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Access</Text>
+          <Text style={styles.permissionButtonText}>{t('tabs.scan.grantAccess')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -101,11 +103,11 @@ export default function ScanScreen() {
           setShowResults(true);
         },
         onError: (error) => {
-          toast.error(getApiErrorMessage(error, 'No se pudo analizar la imagen. Intentá de nuevo.'));
+          toast.error(getApiErrorMessage(error, t('errors.scanImage')));
         },
       });
     } catch (error) {
-      toast.error('Error al capturar la foto. Intentá de nuevo.');
+      toast.error(t('errors.capturePhoto'));
     }
   };
 
@@ -136,11 +138,11 @@ export default function ScanScreen() {
           setShowResults(true);
         },
         onError: (error) => {
-          toast.error(getApiErrorMessage(error, 'No se pudo analizar la imagen. Intentá de nuevo.'));
+          toast.error(getApiErrorMessage(error, t('errors.scanImage')));
         },
       });
     } catch (error) {
-      toast.error('Error al seleccionar la imagen. Intentá de nuevo.');
+      toast.error(t('errors.pickImage'));
     }
   };
 
@@ -164,10 +166,10 @@ export default function ScanScreen() {
           setShowResults(false);
           setScanResult(null);
           setPhotoUri(null);
-          toast.success('Comida guardada en tu diario.');
+          toast.success(t('tabs.scan.mealSaved'));
         },
         onError: (error) => {
-          toast.error(getApiErrorMessage(error, 'Error al guardar la comida. Intentá de nuevo.'));
+          toast.error(getApiErrorMessage(error, t('errors.saveMeal')));
         },
       }
     );
@@ -197,7 +199,7 @@ export default function ScanScreen() {
 
         <View style={styles.scannerPill}>
           <MaterialIcons name="auto-awesome" size={14} color="#FFF" />
-          <Text style={styles.scannerPillText}>AI SCANNER</Text>
+          <Text style={styles.scannerPillText}>{t('tabs.scan.badge')}</Text>
         </View>
 
         <TouchableOpacity
@@ -229,7 +231,7 @@ export default function ScanScreen() {
         </View>
         <View style={styles.hintPill}>
           <Text style={styles.hintText}>
-            {scanFood.isPending ? 'Analyzing food...' : 'Align food within frame'}
+            {scanFood.isPending ? t('tabs.scan.analyzing') : t('tabs.scan.alignHint')}
           </Text>
         </View>
       </View>
@@ -245,7 +247,7 @@ export default function ScanScreen() {
             disabled={scanFood.isPending}
           >
             <MaterialIcons name="photo-library" size={28} color="#FFF" />
-            <Text style={styles.sideButtonText}>Gallery</Text>
+            <Text style={styles.sideButtonText}>{t('tabs.scan.gallery')}</Text>
           </TouchableOpacity>
 
           {/* Capture button */}
@@ -267,13 +269,13 @@ export default function ScanScreen() {
             activeOpacity={0.7}
           >
             <MaterialIcons name={flash ? 'flash-on' : 'flash-off'} size={28} color="#FFF" />
-            <Text style={styles.sideButtonText}>{flash ? 'On' : 'Off'}</Text>
+            <Text style={styles.sideButtonText}>{flash ? t('common.on') : t('common.off')}</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.manualEntry}>
           <MaterialIcons name="keyboard" size={18} color="rgba(255,255,255,0.8)" />
-          <Text style={styles.manualText}>Or type manually</Text>
+          <Text style={styles.manualText}>{t('tabs.scan.manualEntry')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -291,7 +293,7 @@ export default function ScanScreen() {
                 <View style={styles.resultConfidence}>
                   <MaterialIcons name="auto-awesome" size={16} color={Colors.light.primary} />
                   <Text style={styles.resultConfidenceText}>
-                    {Math.round(scanResult.confidence * 100)}% confidence
+                    {t('tabs.scan.confidence', { value: Math.round(scanResult.confidence * 100) })}
                   </Text>
                 </View>
 
@@ -299,24 +301,24 @@ export default function ScanScreen() {
                 <View style={styles.nutriGrid}>
                   <View style={styles.nutriItem}>
                     <Text style={styles.nutriValue}>{scanResult.calories}</Text>
-                    <Text style={styles.nutriLabel}>kcal</Text>
+                    <Text style={styles.nutriLabel}>{t('tabs.scan.kcal')}</Text>
                   </View>
                   <View style={styles.nutriItem}>
                     <Text style={styles.nutriValue}>{scanResult.protein_g}g</Text>
-                    <Text style={styles.nutriLabel}>Protein</Text>
+                    <Text style={styles.nutriLabel}>{t('tabs.scan.protein')}</Text>
                   </View>
                   <View style={styles.nutriItem}>
                     <Text style={styles.nutriValue}>{scanResult.carbs_g}g</Text>
-                    <Text style={styles.nutriLabel}>Carbs</Text>
+                    <Text style={styles.nutriLabel}>{t('tabs.scan.carbs')}</Text>
                   </View>
                   <View style={styles.nutriItem}>
                     <Text style={styles.nutriValue}>{scanResult.fat_g}g</Text>
-                    <Text style={styles.nutriLabel}>Fat</Text>
+                    <Text style={styles.nutriLabel}>{t('tabs.scan.fat')}</Text>
                   </View>
                 </View>
 
                 {/* Meal Type Selector */}
-                <Text style={styles.mealTypeLabel}>Log as:</Text>
+                <Text style={styles.mealTypeLabel}>{t('tabs.scan.logAs')}</Text>
                 <View style={styles.mealTypeRow}>
                   {MEAL_TYPE_OPTIONS.map((opt) => (
                     <TouchableOpacity
@@ -338,7 +340,7 @@ export default function ScanScreen() {
                           selectedMealType === opt.value && { color: '#FFF' },
                         ]}
                       >
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -361,7 +363,7 @@ export default function ScanScreen() {
                     style={styles.resultCancelBtn}
                     onPress={() => { setShowResults(false); setScanResult(null); }}
                   >
-                    <Text style={styles.resultCancelText}>Retake</Text>
+                    <Text style={styles.resultCancelText}>{t('tabs.scan.retake')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.resultSaveBtn, saveMeal.isPending && { opacity: 0.6 }]}
@@ -371,7 +373,7 @@ export default function ScanScreen() {
                     {saveMeal.isPending ? (
                       <ActivityIndicator size="small" color="#FFF" />
                     ) : (
-                      <Text style={styles.resultSaveText}>Save Meal</Text>
+                      <Text style={styles.resultSaveText}>{t('tabs.scan.saveMeal')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>

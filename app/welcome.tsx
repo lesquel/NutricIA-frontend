@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,9 +22,9 @@ type OnboardingSlide = {
   id: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   iconColor: string;
-  title: string;
-  subtitle: string;
-  features: string[];
+  titleKey: string;
+  subtitleKey: string;
+  featureKeys: string[];
 };
 
 const SLIDES: OnboardingSlide[] = [
@@ -31,53 +32,54 @@ const SLIDES: OnboardingSlide[] = [
     id: '1',
     icon: 'auto-awesome',
     iconColor: '#C67B66',
-    title: 'AI-Powered\nFood Scanner',
-    subtitle: 'Just point your camera at any meal and our AI instantly analyzes calories, macros and nutrients.',
-    features: [
-      'Snap a photo — instant nutrition breakdown',
-      'Protein, Carbs, Fat & Fiber in seconds',
-      'Works with any food, homemade or restaurant',
+    titleKey: 'welcome.slide1.title',
+    subtitleKey: 'welcome.slide1.subtitle',
+    featureKeys: [
+      'welcome.slide1.feature1',
+      'welcome.slide1.feature2',
+      'welcome.slide1.feature3',
     ],
   },
   {
     id: '2',
     icon: 'menu-book',
     iconColor: '#5D7A68',
-    title: 'Your Daily\nNourishment Journal',
-    subtitle: 'Track every meal with beautiful daily timelines. See your breakfast, lunch, snacks & dinner at a glance.',
-    features: [
-      'Organized by meal type — Breakfast to Dinner',
-      'Daily calorie & macro totals updated live',
-      'Swipe between days to review past meals',
+    titleKey: 'welcome.slide2.title',
+    subtitleKey: 'welcome.slide2.subtitle',
+    featureKeys: [
+      'welcome.slide2.feature1',
+      'welcome.slide2.feature2',
+      'welcome.slide2.feature3',
     ],
   },
   {
     id: '3',
     icon: 'yard',
     iconColor: '#5B8FA8',
-    title: 'Grow Your\nHabit Garden',
-    subtitle: 'Turn healthy habits into plants! Each habit becomes a virtual plant that grows with your consistency.',
-    features: [
-      'Plants grow healthier as your streak increases',
-      'Neglected habits wilt — revive them with check-ins',
-      'Track hydration with the water cup tracker',
+    titleKey: 'welcome.slide3.title',
+    subtitleKey: 'welcome.slide3.subtitle',
+    featureKeys: [
+      'welcome.slide3.feature1',
+      'welcome.slide3.feature2',
+      'welcome.slide3.feature3',
     ],
   },
   {
     id: '4',
     icon: 'spa',
     iconColor: '#E8A75A',
-    title: 'Mindful Tracking,\nNot Obsessive',
-    subtitle: 'NutricIA is designed around nourishment, not restriction. Gentle insights, not guilt trips.',
-    features: [
-      'Beautiful nourishment ring — not a calorie alarm',
-      'Personalized goals that adapt to you',
-      'Dark mode, dietary preferences & more',
+    titleKey: 'welcome.slide4.title',
+    subtitleKey: 'welcome.slide4.subtitle',
+    featureKeys: [
+      'welcome.slide4.feature1',
+      'welcome.slide4.feature2',
+      'welcome.slide4.feature3',
     ],
   },
 ];
 
 export default function WelcomeScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -122,15 +124,15 @@ export default function WelcomeScreen() {
       </View>
 
       {/* Title */}
-      <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
-      <Text style={[styles.subtitle, { color: colors.textMuted }]}>{item.subtitle}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t(item.titleKey)}</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t(item.subtitleKey)}</Text>
 
       {/* Feature list */}
       <View style={styles.featureList}>
-        {item.features.map((feature, i) => (
+        {item.featureKeys.map((featureKey, i) => (
           <View key={i} style={styles.featureRow}>
             <View style={[styles.featureDot, { backgroundColor: item.iconColor }]} />
-            <Text style={[styles.featureText, { color: colors.text }]}>{feature}</Text>
+            <Text style={[styles.featureText, { color: colors.text }]}>{t(featureKey)}</Text>
           </View>
         ))}
       </View>
@@ -141,7 +143,7 @@ export default function WelcomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Skip button */}
       <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.6}>
-        <Text style={[styles.skipText, { color: colors.textMuted }]}>Skip</Text>
+        <Text style={[styles.skipText, { color: colors.textMuted }]}>{t('welcome.skip')}</Text>
       </TouchableOpacity>
 
       {/* Slides */}
@@ -206,7 +208,7 @@ export default function WelcomeScreen() {
           onPress={handleNext}
           activeOpacity={0.8}
         >
-          <Text style={styles.ctaText}>{isLast ? 'Get Started' : 'Next'}</Text>
+          <Text style={styles.ctaText}>{isLast ? t('welcome.getStarted') : t('welcome.next')}</Text>
           <MaterialIcons name={isLast ? 'arrow-forward' : 'chevron-right'} size={22} color="#FFF" />
         </TouchableOpacity>
 
@@ -214,8 +216,8 @@ export default function WelcomeScreen() {
         {!isLast && (
           <TouchableOpacity onPress={() => { completeOnboarding(); router.replace('/login'); }} style={styles.loginLink}>
             <Text style={[styles.loginLinkText, { color: colors.textMuted }]}>
-              Already have an account?{' '}
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>Log In</Text>
+              {t('welcome.haveAccount')}{' '}
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('welcome.logIn')}</Text>
             </Text>
           </TouchableOpacity>
         )}

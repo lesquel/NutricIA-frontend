@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,9 +22,11 @@ function toMonthKey(date: Date): string {
 }
 
 export default function JournalScreen() {
+  const { t, i18n } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const dateLocale = i18n.language.startsWith('es') ? 'es-AR' : 'en-US';
   const selectedDate = useDateStore((s) => s.selectedDate);
   const setSelectedDate = useDateStore((s) => s.setSelectedDate);
 
@@ -65,7 +68,7 @@ export default function JournalScreen() {
   const detailSheet = (
     <View style={[styles.detailModal, Platform.OS === 'web' && styles.webDetailModal, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
       <View style={styles.detailHeader}>
-        <Text style={[styles.detailTitle, { color: colors.text }]}>Meal Details</Text>
+        <Text style={[styles.detailTitle, { color: colors.text }]}>{t('tabs.journal.detailTitle')}</Text>
         <TouchableOpacity onPress={() => setDetailMeal(null)} style={[styles.detailClose, { backgroundColor: colors.background }]}> 
           <MaterialIcons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
@@ -81,8 +84,8 @@ export default function JournalScreen() {
         )}
 
         <Text style={[styles.detailMealName, { color: colors.text }]}>{detailMeal?.name}</Text>
-        <Text style={[styles.detailMealMeta, { color: colors.textMuted }]}> 
-          {detailMeal?.meal_type} • {detailMeal ? new Date(detailMeal.logged_at).toLocaleString() : ''}
+        <Text style={[styles.detailMealMeta, { color: colors.textMuted }]}>
+          {detailMeal?.meal_type} • {detailMeal ? new Date(detailMeal.logged_at).toLocaleString(dateLocale) : ''}
         </Text>
 
         {!!detailMeal?.tags?.length && (
@@ -97,23 +100,23 @@ export default function JournalScreen() {
 
         <View style={[styles.detailStatsCard, { backgroundColor: colors.background, borderColor: colors.border }]}> 
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Calories</Text>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{t('tabs.journal.calories')}</Text>
             <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.calories ?? 0} kcal</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Protein</Text>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{t('tabs.journal.protein')}</Text>
             <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.protein_g ?? 0}g ({mealPercentages.protein}%)</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Carbs</Text>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{t('tabs.journal.carbs')}</Text>
             <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.carbs_g ?? 0}g ({mealPercentages.carbs}%)</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>Fat</Text>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{t('tabs.journal.fat')}</Text>
             <Text style={[styles.detailValue, { color: colors.text }]}>{detailMeal?.fat_g ?? 0}g ({mealPercentages.fat}%)</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>AI Confidence</Text>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{t('tabs.journal.aiConfidence')}</Text>
             <Text style={[styles.detailValue, { color: colors.primary }]}> 
               {Math.round((detailMeal?.confidence_score ?? 0) * 100)}%
             </Text>
@@ -124,7 +127,7 @@ export default function JournalScreen() {
           style={[styles.closeBtn, { backgroundColor: colors.primary, marginTop: 16 }]}
           onPress={() => setDetailMeal(null)}
         >
-          <Text style={styles.closeBtnText}>Done</Text>
+          <Text style={styles.closeBtnText}>{t('common.done')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -134,7 +137,7 @@ export default function JournalScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Journal</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('tabs.journal.title')}</Text>
         <TouchableOpacity
           style={[styles.calendarBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => setCalendarOpen(true)}
@@ -154,7 +157,7 @@ export default function JournalScreen() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <MaterialIcons name={section.icon as keyof typeof MaterialIcons.glyphMap} size={18} color={colors.textMuted} />
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{t(section.title)}</Text>
                 </View>
                 {section.totalKcal > 0 && (
                   <Text style={[styles.sectionKcal, { color: colors.textMuted }]}>
@@ -175,7 +178,7 @@ export default function JournalScreen() {
                 >
                   <MaterialIcons name="add" size={24} color={colors.textMuted} />
                   <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                    Add {section.title}
+                    {t('tabs.journal.addPrefix', { section: t(section.title) })}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -191,7 +194,7 @@ export default function JournalScreen() {
         <View style={[styles.totalBar, Shadows.soft]}>
           <View style={styles.totalBarTop}>
             <View>
-              <Text style={styles.totalLabel}>Daily Nourishment</Text>
+              <Text style={styles.totalLabel}>{t('tabs.journal.daily')}</Text>
               <Text style={styles.totalValue}>
                 {totalDayCalories.toLocaleString()}{' '}
                 <Text style={styles.totalGoal}>/ {calorieGoal.toLocaleString()} kcal</Text>
@@ -217,8 +220,8 @@ export default function JournalScreen() {
               >
                 <MaterialIcons name="chevron-left" size={20} color={colors.text} />
               </TouchableOpacity>
-              <Text style={[styles.calendarTitle, { color: colors.text }]}> 
-                {monthCursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              <Text style={[styles.calendarTitle, { color: colors.text }]}>
+                {monthCursor.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' })}
               </Text>
               <TouchableOpacity
                 style={[styles.monthNavBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
@@ -230,14 +233,14 @@ export default function JournalScreen() {
 
             <View style={[styles.calendarSummary, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <View style={styles.calendarSummaryItem}>
-                <Text style={[styles.calendarSummaryLabel, { color: colors.textMuted }]}>Days with meals</Text>
+                <Text style={[styles.calendarSummaryLabel, { color: colors.textMuted }]}>{t('tabs.journal.daysWithMeals')}</Text>
                 <Text style={[styles.calendarSummaryValue, { color: colors.text }]}>{enabledDays.size}</Text>
               </View>
               <View style={styles.calendarSummaryDivider} />
               <View style={styles.calendarSummaryItem}>
-                <Text style={[styles.calendarSummaryLabel, { color: colors.textMuted }]}>Selected date</Text>
+                <Text style={[styles.calendarSummaryLabel, { color: colors.textMuted }]}>{t('tabs.journal.selectedDate')}</Text>
                 <Text style={[styles.calendarSummaryValue, { color: colors.text }]}>
-                  {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {selectedDate.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                 </Text>
               </View>
             </View>
@@ -300,15 +303,15 @@ export default function JournalScreen() {
               })}
             </View>
 
-            <Text style={[styles.calendarHint, { color: colors.textMuted }]}> 
-              Days without meals are disabled.
+            <Text style={[styles.calendarHint, { color: colors.textMuted }]}>
+              {t('tabs.journal.calendarHint')}
             </Text>
 
             <TouchableOpacity
               style={[styles.closeBtn, { backgroundColor: colors.primary }]}
               onPress={() => setCalendarOpen(false)}
             >
-              <Text style={styles.closeBtnText}>Close</Text>
+              <Text style={styles.closeBtnText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>

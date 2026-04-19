@@ -16,39 +16,50 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, Shadows, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeStore, type ThemePreference } from '@/shared/store/theme.store';
+import { useLanguageStore } from '@/shared/store/language.store';
+import type { SupportedLanguage } from '@/shared/i18n';
 import { resolveMediaUrl } from '../shared/lib/media-url';
 import { useUserSettings, useUpdateProfile, useUploadAvatar, useDeleteAvatar, useUpdateGoals, useUpdateDietaryPreferences, useDeleteAccount } from '@/features/settings/hooks/use-settings';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useLogout } from '@/features/auth/hooks/use-auth';
 import { useToast } from '@/shared/hooks/use-toast';
 
-const DIET_TAGS = [
-  'Vegan',
-  'Keto',
-  'Paleo',
-  'Gluten-Free',
-  'Low Sugar',
-  'Pescatarian',
-  'Vegetarian',
-  'Mediterranean',
+const DIET_TAGS: { id: string; i18nKey: string }[] = [
+  { id: 'Vegan', i18nKey: 'diet.vegan' },
+  { id: 'Keto', i18nKey: 'diet.keto' },
+  { id: 'Paleo', i18nKey: 'diet.paleo' },
+  { id: 'Gluten-Free', i18nKey: 'diet.glutenFree' },
+  { id: 'Low Sugar', i18nKey: 'diet.lowSugar' },
+  { id: 'Pescatarian', i18nKey: 'diet.pescatarian' },
+  { id: 'Vegetarian', i18nKey: 'diet.vegetarian' },
+  { id: 'Mediterranean', i18nKey: 'diet.mediterranean' },
 ];
 
-const THEME_OPTIONS: { value: ThemePreference; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { value: 'system', label: 'System', icon: 'settings-suggest' },
-  { value: 'light', label: 'Light', icon: 'light-mode' },
-  { value: 'dark', label: 'Dark', icon: 'dark-mode' },
+const THEME_OPTIONS: { value: ThemePreference; i18nKey: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { value: 'system', i18nKey: 'settings.themeSystem', icon: 'settings-suggest' },
+  { value: 'light', i18nKey: 'settings.themeLight', icon: 'light-mode' },
+  { value: 'dark', i18nKey: 'settings.themeDark', icon: 'dark-mode' },
+];
+
+const LANGUAGE_OPTIONS: { value: SupportedLanguage; i18nKey: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { value: 'es', i18nKey: 'settings.languageSpanish', icon: 'translate' },
+  { value: 'en', i18nKey: 'settings.languageEnglish', icon: 'translate' },
 ];
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
   const themePreference = useThemeStore((s) => s.preference);
   const setThemePreference = useThemeStore((s) => s.setPreference);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
 
   const user = useAuthStore((s) => s.user);
   const { data: settings, isLoading } = useUserSettings();
@@ -66,6 +77,7 @@ export default function SettingsScreen() {
   const [waterGoal, setWaterGoal] = useState(user?.water_goal_ml ?? 2500);
   const [activeTags, setActiveTags] = useState<string[]>(user?.dietary_preferences ?? []);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState('');
 
@@ -101,7 +113,10 @@ export default function SettingsScreen() {
   const displayName = settings?.name ?? user?.name ?? 'User';
   const avatarUrl = resolveMediaUrl(settings?.avatar_url ?? user?.avatar_url);
   const initials = displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
-  const themeLabel = THEME_OPTIONS.find((o) => o.value === themePreference)?.label ?? 'System';
+  const themeOption = THEME_OPTIONS.find((o) => o.value === themePreference);
+  const themeLabel = themeOption ? t(themeOption.i18nKey) : t('settings.themeSystem');
+  const languageOption = LANGUAGE_OPTIONS.find((o) => o.value === language);
+  const languageLabel = languageOption ? t(languageOption.i18nKey) : 'Español';
 
   const handlePickAvatar = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -117,12 +132,12 @@ export default function SettingsScreen() {
 
   const handleRemoveAvatar = () => {
     Alert.alert(
-      'Remove Avatar',
-      'Are you sure you want to remove your profile photo?',
+      t('settings.removeAvatarTitle'),
+      t('settings.removeAvatarMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: () => deleteAvatar.mutate(),
         },
@@ -132,12 +147,12 @@ export default function SettingsScreen() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'This action is permanent and cannot be undone. All your data will be lost.',
+      t('settings.deleteAccountTitle'),
+      t('settings.deleteAccountMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete Forever',
+          text: t('settings.deleteForever'),
           style: 'destructive',
           onPress: () => {
             deleteAccountMutation.mutate(undefined, {
@@ -146,7 +161,7 @@ export default function SettingsScreen() {
                 router.replace('/login');
               },
               onError: () => {
-                toast.error('No se pudo eliminar la cuenta. Intentá de nuevo.');
+                toast.error(t('settings.deleteAccountError'));
               },
             });
           },
@@ -164,7 +179,7 @@ export default function SettingsScreen() {
       await logoutMutation.mutateAsync();
       router.replace('/login');
     } catch {
-      toast.error('No se pudo cerrar sesión. Intentá de nuevo.');
+      toast.error(t('settings.signOutError'));
     }
   };
 
@@ -178,7 +193,7 @@ export default function SettingsScreen() {
         >
           <MaterialIcons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings & Goals</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -202,7 +217,7 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
           <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
-          <Text style={[styles.profileRole, { color: colors.primary }]}>Mindful Eater</Text>
+          <Text style={[styles.profileRole, { color: colors.primary }]}>{t('settings.role')}</Text>
           <TouchableOpacity
             style={[styles.editProfileBtn, { borderColor: `${colors.accent}50` }]}
             activeOpacity={0.7}
@@ -211,7 +226,7 @@ export default function SettingsScreen() {
               setShowEditProfile(true);
             }}
           >
-            <Text style={[styles.editProfileText, { color: colors.accent }]}>EDIT PROFILE</Text>
+            <Text style={[styles.editProfileText, { color: colors.accent }]}>{t('settings.editProfile')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -219,14 +234,14 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <View style={styles.cardTitleRow}>
             <MaterialIcons name="bolt" size={22} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Daily Targets</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('settings.dailyTargets')}</Text>
           </View>
 
           {/* Energy Slider */}
           <View style={styles.sliderSection}>
             <View style={styles.sliderLabel}>
               <Text style={[styles.sliderLabelText, { color: colors.textMuted }]}>
-                ENERGY GOAL
+                {t('settings.energyGoal')}
               </Text>
               <Text style={[styles.sliderValue, { color: colors.text }]}>
                 {calorieGoal.toLocaleString()}{' '}
@@ -261,7 +276,7 @@ export default function SettingsScreen() {
               </View>
             </View>
             <Text style={[styles.sliderHint, { color: colors.textMuted }]}>
-              Recommended for maintaining current weight based on your activity level.
+              {t('settings.energyHint')}
             </Text>
           </View>
 
@@ -269,7 +284,7 @@ export default function SettingsScreen() {
           <View style={[styles.sliderSection, { marginTop: 24 }]}>
             <View style={styles.sliderLabel}>
               <Text style={[styles.sliderLabelText, { color: colors.textMuted }]}>
-                HYDRATION
+                {t('settings.hydration')}
               </Text>
               <Text style={[styles.sliderValue, { color: colors.text }]}>
                 {waterGoal.toLocaleString()}{' '}
@@ -310,18 +325,18 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <View style={styles.cardTitleRow}>
             <MaterialIcons name="restaurant-menu" size={22} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Dietary Preferences</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('settings.dietaryPreferences')}</Text>
           </View>
           <Text style={[styles.dietHint, { color: colors.textMuted }]}>
-            Select tags to customize AI food recognition suggestions.
+            {t('settings.dietaryHint')}
           </Text>
           <View style={styles.tagsWrap}>
             {DIET_TAGS.map((tag) => {
-              const active = activeTags.includes(tag);
+              const active = activeTags.includes(tag.id);
               return (
                 <TouchableOpacity
-                  key={tag}
-                  onPress={() => toggleTag(tag)}
+                  key={tag.id}
+                  onPress={() => toggleTag(tag.id)}
                   style={[
                     styles.tag,
                     active
@@ -337,7 +352,7 @@ export default function SettingsScreen() {
                       { color: active ? '#FFF' : colors.textMuted },
                     ]}
                   >
-                    {tag}
+                    {t(tag.i18nKey)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -356,10 +371,10 @@ export default function SettingsScreen() {
               <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
                 <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
               </View>
-              <Text style={[styles.settingsLabel, { color: colors.text }]}>Notifications</Text>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('settings.notifications')}</Text>
             </View>
             <View style={styles.settingsRowRight}>
-              <Text style={[styles.settingsValue, { color: colors.textMuted }]}>On</Text>
+              <Text style={[styles.settingsValue, { color: colors.textMuted }]}>{t('common.on')}</Text>
               <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
             </View>
           </TouchableOpacity>
@@ -374,10 +389,28 @@ export default function SettingsScreen() {
               <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
                 <MaterialIcons name="palette" size={20} color={colors.primary} />
               </View>
-              <Text style={[styles.settingsLabel, { color: colors.text }]}>Theme</Text>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('settings.theme')}</Text>
             </View>
             <View style={styles.settingsRowRight}>
               <Text style={[styles.settingsValue, { color: colors.textMuted }]}>{themeLabel}</Text>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Language — opens picker */}
+          <TouchableOpacity
+            onPress={() => setShowLanguagePicker(true)}
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+            activeOpacity={0.6}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
+                <MaterialIcons name="translate" size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('settings.language')}</Text>
+            </View>
+            <View style={styles.settingsRowRight}>
+              <Text style={[styles.settingsValue, { color: colors.textMuted }]}>{languageLabel}</Text>
               <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
             </View>
           </TouchableOpacity>
@@ -391,7 +424,7 @@ export default function SettingsScreen() {
               <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
                 <MaterialIcons name="security" size={20} color={colors.primary} />
               </View>
-              <Text style={[styles.settingsLabel, { color: colors.text }]}>Privacy & Data</Text>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('settings.privacy')}</Text>
             </View>
             <View style={styles.settingsRowRight}>
               <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
@@ -407,7 +440,7 @@ export default function SettingsScreen() {
               <View style={[styles.settingsIconCircle, { backgroundColor: `${colors.primary}18` }]}>
                 <MaterialIcons name="help-outline" size={20} color={colors.primary} />
               </View>
-              <Text style={[styles.settingsLabel, { color: colors.text }]}>Help & Support</Text>
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('settings.help')}</Text>
             </View>
             <View style={styles.settingsRowRight}>
               <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
@@ -424,7 +457,7 @@ export default function SettingsScreen() {
               <View style={[styles.settingsIconCircle, { backgroundColor: '#C6676618' }]}>
                 <MaterialIcons name="logout" size={20} color="#C66766" />
               </View>
-              <Text style={[styles.settingsLabel, { color: '#C66766' }]}>Sign Out</Text>
+              <Text style={[styles.settingsLabel, { color: '#C66766' }]}>{t('settings.signOut')}</Text>
             </View>
             <View style={styles.settingsRowRight}>
               {logoutMutation.isPending ? (
@@ -445,7 +478,7 @@ export default function SettingsScreen() {
               <View style={[styles.settingsIconCircle, { backgroundColor: '#C6676618' }]}>
                 <MaterialIcons name="delete-forever" size={20} color="#C66766" />
               </View>
-              <Text style={[styles.settingsLabel, { color: '#C66766' }]}>Delete Account</Text>
+              <Text style={[styles.settingsLabel, { color: '#C66766' }]}>{t('settings.deleteAccount')}</Text>
             </View>
             <View style={styles.settingsRowRight}>
               {deleteAccountMutation.isPending ? (
@@ -458,7 +491,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Version */}
-        <Text style={[styles.version, { color: colors.textMuted }]}>NutricIA v0.1.0</Text>
+        <Text style={[styles.version, { color: colors.textMuted }]}>{t('settings.version')}</Text>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -467,7 +500,7 @@ export default function SettingsScreen() {
       <Modal visible={showEditProfile} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowEditProfile(false)}>
           <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Profile</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.editProfileTitle')}</Text>
 
             {/* Avatar section */}
             <View style={styles.editAvatarSection}>
@@ -490,7 +523,7 @@ export default function SettingsScreen() {
                   activeOpacity={0.7}
                 >
                   <MaterialIcons name="upload" size={16} color={colors.primary} />
-                  <Text style={[styles.editAvatarBtnText, { color: colors.primary }]}>Upload</Text>
+                  <Text style={[styles.editAvatarBtnText, { color: colors.primary }]}>{t('common.upload')}</Text>
                 </TouchableOpacity>
                 {avatarUrl && (
                   <TouchableOpacity
@@ -502,14 +535,14 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                   >
                     <MaterialIcons name="delete-outline" size={16} color="#C66766" />
-                    <Text style={[styles.editAvatarBtnText, { color: '#C66766' }]}>Remove</Text>
+                    <Text style={[styles.editAvatarBtnText, { color: '#C66766' }]}>{t('common.remove')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
 
             {/* Name input */}
-            <Text style={[styles.editLabel, { color: colors.textMuted }]}>NAME</Text>
+            <Text style={[styles.editLabel, { color: colors.textMuted }]}>{t('settings.nameLabel')}</Text>
             <TextInput
               style={[
                 styles.editInput,
@@ -521,7 +554,7 @@ export default function SettingsScreen() {
               ]}
               value={editName}
               onChangeText={setEditName}
-              placeholder="Enter your name"
+              placeholder={t('settings.namePlaceholder')}
               placeholderTextColor={colors.textMuted}
               autoFocus
               returnKeyType="done"
@@ -541,7 +574,7 @@ export default function SettingsScreen() {
                 onPress={() => setShowEditProfile(false)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.editCancelText, { color: colors.textMuted }]}>Cancel</Text>
+                <Text style={[styles.editCancelText, { color: colors.textMuted }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.editSaveBtn, { backgroundColor: colors.primary, opacity: editName.trim() ? 1 : 0.5 }]}
@@ -558,7 +591,7 @@ export default function SettingsScreen() {
                 {updateProfile.isPending ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={styles.editSaveText}>Save</Text>
+                  <Text style={styles.editSaveText}>{t('common.save')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -570,7 +603,7 @@ export default function SettingsScreen() {
       <Modal visible={showThemePicker} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setShowThemePicker(false)}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Theme</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.themeTitle')}</Text>
             {THEME_OPTIONS.map((opt) => {
               const selected = themePreference === opt.value;
               return (
@@ -599,7 +632,50 @@ export default function SettingsScreen() {
                       selected && { fontWeight: '700' },
                     ]}
                   >
-                    {opt.label}
+                    {t(opt.i18nKey)}
+                  </Text>
+                  {selected && <MaterialIcons name="check-circle" size={22} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Language Picker Modal */}
+      <Modal visible={showLanguagePicker} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLanguagePicker(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('settings.languageTitle')}</Text>
+            {LANGUAGE_OPTIONS.map((opt) => {
+              const selected = language === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => {
+                    setLanguage(opt.value);
+                    setShowLanguagePicker(false);
+                  }}
+                  style={[
+                    styles.themeOption,
+                    selected && { backgroundColor: `${colors.primary}15` },
+                    { borderColor: selected ? colors.primary : colors.border },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons
+                    name={opt.icon}
+                    size={22}
+                    color={selected ? colors.primary : colors.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      { color: selected ? colors.primary : colors.text },
+                      selected && { fontWeight: '700' },
+                    ]}
+                  >
+                    {t(opt.i18nKey)}
                   </Text>
                   {selected && <MaterialIcons name="check-circle" size={22} color={colors.primary} />}
                 </TouchableOpacity>

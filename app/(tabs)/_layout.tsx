@@ -2,12 +2,14 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -40,7 +42,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
+          title: t('tabs.labels.today'),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="spa" size={28} color={color} />
           ),
@@ -49,7 +51,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scan',
+          title: t('tabs.labels.scan'),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="photo-camera" size={28} color={color} />
           ),
@@ -58,7 +60,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="journal"
         options={{
-          title: 'Journal',
+          title: t('tabs.labels.journal'),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="menu-book" size={28} color={color} />
           ),
@@ -67,7 +69,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recipes"
         options={{
-          title: 'Recetas',
+          title: t('tabs.labels.recipes'),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="restaurant" size={28} color={color} />
           ),
@@ -76,7 +78,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="garden"
         options={{
-          title: 'Garden',
+          title: t('tabs.labels.garden'),
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="yard" size={28} color={color} />
           ),

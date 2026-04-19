@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
+import { resolveMediaUrl } from '../../shared/lib/media-url';
 
 import { Colors, Shadows, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -16,6 +19,7 @@ import { useWaterLog } from '@/features/garden/hooks/use-garden';
 import { useCurrentPlan } from '@/features/planner/hooks/use-current-plan';
 
 export default function DashboardScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -41,12 +45,13 @@ export default function DashboardScreen() {
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  }, []);
+    if (hour < 12) return t('tabs.home.goodMorning');
+    if (hour < 18) return t('tabs.home.goodAfternoon');
+    return t('tabs.home.goodEvening');
+  }, [t]);
 
-  const displayName = user?.name?.split(' ')[0] ?? 'There';
+  const displayName = user?.name?.split(' ')[0] ?? t('tabs.home.guestName');
+  const avatarUrl = resolveMediaUrl(user?.avatar_url);
   const isLoading = summaryLoading || mealsLoading;
 
   return (
@@ -59,8 +64,17 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => router.push('/settings')}
           style={[styles.avatar, { borderColor: colors.surface, backgroundColor: colors.surface }]}
+          accessibilityLabel={t('tabs.home.openSettings', { defaultValue: 'Open settings' })}
         >
-          <MaterialIcons name="person" size={28} color={colors.primary} />
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <MaterialIcons name="person" size={28} color={colors.primary} />
+          )}
           <View style={[styles.onlineDot, { backgroundColor: colors.primary, borderColor: colors.background }]} />
         </TouchableOpacity>
       </View>
@@ -73,18 +87,18 @@ export default function DashboardScreen() {
 
         {/* Macro Pills */}
         <View style={styles.macrosGrid}>
-          <MacroPill icon="egg-alt" label="Protein" value={`${Math.round(proteinTotal)}g (${proteinPct}%)`} />
-          <MacroPill icon="grain" label="Carbs" value={`${Math.round(carbsTotal)}g (${carbsPct}%)`} />
-          <MacroPill icon="water-drop" label="Fats" value={`${Math.round(fatTotal)}g (${fatPct}%)`} />
+          <MacroPill icon="egg-alt" label={t('tabs.home.proteinLabel')} value={`${Math.round(proteinTotal)}g (${proteinPct}%)`} />
+          <MacroPill icon="grain" label={t('tabs.home.carbsLabel')} value={`${Math.round(carbsTotal)}g (${carbsPct}%)`} />
+          <MacroPill icon="water-drop" label={t('tabs.home.fatsLabel')} value={`${Math.round(fatTotal)}g (${fatPct}%)`} />
         </View>
 
         <View style={[styles.hydrationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <View style={styles.hydrationHeader}>
             <View style={styles.hydrationTitleRow}>
               <MaterialIcons name="water-drop" size={20} color={colors.waterBlue} />
-              <Text style={[styles.hydrationTitle, { color: colors.text }]}>Hydration</Text>
+              <Text style={[styles.hydrationTitle, { color: colors.text }]}>{t('tabs.home.hydration')}</Text>
             </View>
-            <Text style={[styles.hydrationValue, { color: colors.textMuted }]}>{waterCups}/{waterGoalCups} cups</Text>
+            <Text style={[styles.hydrationValue, { color: colors.textMuted }]}>{waterCups}/{waterGoalCups} {t('tabs.home.cups')}</Text>
           </View>
           <View style={[styles.hydrationTrack, { backgroundColor: colors.border }]}> 
             <View
@@ -98,9 +112,9 @@ export default function DashboardScreen() {
 
         {/* Today's Nourishment */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today&apos;s Nourishment</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('tabs.home.todaysNourishment')}</Text>
           <TouchableOpacity onPress={() => router.push('/journal')}>
-            <Text style={[styles.viewAll, { color: colors.primary }]}>View All</Text>
+            <Text style={[styles.viewAll, { color: colors.primary }]}>{t('tabs.home.viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -117,16 +131,16 @@ export default function DashboardScreen() {
           >
             <MaterialIcons name="add-circle-outline" size={32} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-              No meals logged yet — tap to scan your first meal
+              {t('tabs.home.emptyMeals')}
             </Text>
           </TouchableOpacity>
         )}
 
         {/* Planner Widget */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Plan de la semana</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('tabs.home.weekPlan')}</Text>
           <TouchableOpacity onPress={() => router.push('/planner')}>
-            <Text style={[styles.viewAll, { color: colors.primary }]}>Ver semana</Text>
+            <Text style={[styles.viewAll, { color: colors.primary }]}>{t('tabs.home.viewWeek')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -138,10 +152,10 @@ export default function DashboardScreen() {
             <MaterialIcons name="calendar-today" size={28} color={colors.primary} />
             <View style={styles.plannerEmptyText}>
               <Text style={[styles.plannerEmptyTitle, { color: colors.text }]}>
-                Aún no tenés un plan
+                {t('tabs.home.noPlanTitle')}
               </Text>
               <Text style={[styles.plannerEmptySubtitle, { color: colors.textMuted }]}>
-                Generá tu plan semanal personalizado
+                {t('tabs.home.noPlanSubtitle')}
               </Text>
             </View>
             <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
@@ -152,24 +166,24 @@ export default function DashboardScreen() {
               const today = new Date();
               const todayDow = (today.getDay() + 6) % 7; // Mon=0..Sun=6
               const todayMeals = currentPlan.meals.filter((m) => m.day_of_week === todayDow);
-              const MEAL_LABELS: Record<string, string> = {
-                breakfast: 'Desayuno',
-                lunch: 'Almuerzo',
-                snack: 'Merienda',
-                dinner: 'Cena',
+              const MEAL_LABEL_KEYS: Record<string, string> = {
+                breakfast: 'planner.meals.breakfast',
+                lunch: 'planner.meals.lunch',
+                snack: 'planner.meals.snack',
+                dinner: 'planner.meals.dinner',
               };
               return (
                 <>
                   {todayMeals.length === 0 ? (
                     <Text style={[styles.plannerNoMeals, { color: colors.textMuted }]}>
-                      No hay comidas planificadas para hoy
+                      {t('tabs.home.noMealsToday')}
                     </Text>
                   ) : (
                     todayMeals.slice(0, 4).map((meal) => (
                       <View key={meal.id} style={[styles.plannerMealRow, { borderBottomColor: colors.border }]}>
                         <View style={styles.plannerMealLeft}>
                           <Text style={[styles.plannerMealType, { color: colors.textMuted }]}>
-                            {MEAL_LABELS[meal.meal_type] ?? meal.meal_type}
+                            {MEAL_LABEL_KEYS[meal.meal_type] ? t(MEAL_LABEL_KEYS[meal.meal_type]) : meal.meal_type}
                           </Text>
                           <Text style={[styles.plannerMealName, { color: colors.text }]} numberOfLines={1}>
                             {meal.recipe_name}
@@ -190,7 +204,7 @@ export default function DashboardScreen() {
                     style={[styles.plannerViewAll, { borderTopColor: colors.border }]}
                     onPress={() => router.push('/planner')}
                   >
-                    <Text style={[styles.plannerViewAllText, { color: colors.primary }]}>Ver semana completa</Text>
+                    <Text style={[styles.plannerViewAllText, { color: colors.primary }]}>{t('tabs.home.viewFullWeek')}</Text>
                     <MaterialIcons name="chevron-right" size={16} color={colors.primary} />
                   </TouchableOpacity>
                 </>
@@ -237,6 +251,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
   },
   onlineDot: {
     position: 'absolute',

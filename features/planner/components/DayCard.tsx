@@ -5,18 +5,27 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/shared/components/ui/Card';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import type { PlannedMeal, Macros } from '@/shared/types/api';
 
-const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_KEYS = [
+  'planner.days.monday',
+  'planner.days.tuesday',
+  'planner.days.wednesday',
+  'planner.days.thursday',
+  'planner.days.friday',
+  'planner.days.saturday',
+  'planner.days.sunday',
+];
 
-const MEAL_LABELS: Record<PlannedMeal['meal_type'], string> = {
-  breakfast: 'Desayuno',
-  lunch: 'Almuerzo',
-  snack: 'Merienda',
-  dinner: 'Cena',
+const MEAL_LABEL_KEYS: Record<PlannedMeal['meal_type'], string> = {
+  breakfast: 'planner.meals.breakfast',
+  lunch: 'planner.meals.lunch',
+  snack: 'planner.meals.snack',
+  dinner: 'planner.meals.dinner',
 };
 
 const MEAL_ICONS: Record<PlannedMeal['meal_type'], keyof typeof MaterialIcons.glyphMap> = {
@@ -36,6 +45,7 @@ export interface DayCardProps {
 }
 
 export function DayCard({ date, dayOfWeek, meals, targetCalories, targetMacros, onMealPress }: DayCardProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -49,7 +59,7 @@ export function DayCard({ date, dayOfWeek, meals, targetCalories, targetMacros, 
   const carbsPct = Math.min(targetMacros.carbs_g > 0 ? totalCarbs / targetMacros.carbs_g : 0, 1);
   const fatPct = Math.min(targetMacros.fat_g > 0 ? totalFat / targetMacros.fat_g : 0, 1);
 
-  const dayName = DAY_NAMES[dayOfWeek] ?? `Día ${dayOfWeek + 1}`;
+  const dayName = DAY_KEYS[dayOfWeek] ? t(DAY_KEYS[dayOfWeek]) : `${dayOfWeek + 1}`;
   const dateStr = date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 
   const isToday = (() => {
@@ -72,7 +82,7 @@ export function DayCard({ date, dayOfWeek, meals, targetCalories, targetMacros, 
             </Text>
             {isToday && (
               <View style={[styles.todayBadge, { backgroundColor: colors.primary + '22' }]}>
-                <Text style={[styles.todayText, { color: colors.primary }]}>Hoy</Text>
+                <Text style={[styles.todayText, { color: colors.primary }]}>{t('planner.day.today')}</Text>
               </View>
             )}
           </View>
@@ -105,7 +115,7 @@ export function DayCard({ date, dayOfWeek, meals, targetCalories, targetMacros, 
         {/* Meal list */}
         <View style={styles.mealList}>
           {meals.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Sin comidas planificadas</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('planner.day.noMeals')}</Text>
           ) : (
             meals.map((meal) => (
               <TouchableOpacity
@@ -119,7 +129,7 @@ export function DayCard({ date, dayOfWeek, meals, targetCalories, targetMacros, 
                 </View>
                 <View style={styles.mealInfo}>
                   <Text style={[styles.mealType, { color: colors.textMuted }]}>
-                    {MEAL_LABELS[meal.meal_type]}
+                    {t(MEAL_LABEL_KEYS[meal.meal_type])}
                   </Text>
                   <Text style={[styles.mealName, { color: colors.text }]} numberOfLines={1}>
                     {meal.recipe_name}

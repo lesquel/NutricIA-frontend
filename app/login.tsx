@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -23,6 +24,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -37,10 +39,10 @@ export default function LoginScreen() {
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!email.trim()) next.email = 'El email es requerido';
-    else if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Ingresá un email válido';
-    if (!password) next.password = 'La contraseña es requerida';
-    else if (password.length < 8) next.password = 'Mínimo 8 caracteres';
+    if (!email.trim()) next.email = t('errors.emailRequired');
+    else if (!/\S+@\S+\.\S+/.test(email)) next.email = t('errors.emailInvalid');
+    if (!password) next.password = t('errors.passwordRequired');
+    else if (password.length < 8) next.password = t('errors.passwordMin');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -57,7 +59,7 @@ export default function LoginScreen() {
         onError: (err: unknown) => {
           const detail =
             (err as { body?: { detail?: string } })?.body?.detail ??
-            'Credenciales incorrectas';
+            t('errors.loginFailed');
           toast.error(detail);
         },
       },
@@ -82,23 +84,23 @@ export default function LoginScreen() {
             </View>
             <Text style={[styles.appName, { color: colors.text }]}>NutricIA</Text>
             <Text style={[styles.tagline, { color: colors.textMuted }]}>
-              Mindful nourishment, powered by AI
+              {t('auth.tagline')}
             </Text>
           </View>
 
           {/* Form Card */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, ...Shadows.soft }]}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>Bienvenido de vuelta</Text>
+            <Text style={[styles.formTitle, { color: colors.text }]}>{t('auth.login.title')}</Text>
             <Text style={[styles.formSubtitle, { color: colors.textMuted }]}>
-              Iniciá sesión para continuar tu camino
+              {t('auth.login.subtitle')}
             </Text>
 
             {/* Email */}
             <Input
-              label="EMAIL"
-              placeholder="vos@ejemplo.com"
+              label={t('auth.login.emailLabel')}
+              placeholder={t('auth.login.emailPlaceholder')}
               value={email}
-              onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
+              onChangeText={(v) => { setEmail(v); setErrors((e) => ({ ...e, email: undefined })); }}
               error={errors.email}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -108,10 +110,10 @@ export default function LoginScreen() {
 
             {/* Password */}
             <Input
-              label="CONTRASEÑA"
+              label={t('auth.login.passwordLabel')}
               placeholder="••••••••"
               value={password}
-              onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
+              onChangeText={(v) => { setPassword(v); setErrors((e) => ({ ...e, password: undefined })); }}
               error={errors.password}
               secureTextEntry
               prefix={<MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />}
@@ -123,7 +125,7 @@ export default function LoginScreen() {
               onPress={() => router.push('/forgot-password')}
             >
               <Text style={[styles.forgotText, { color: colors.primary }]}>
-                ¿Olvidaste tu contraseña?
+                {t('auth.login.forgot')}
               </Text>
             </TouchableOpacity>
 
@@ -135,13 +137,13 @@ export default function LoginScreen() {
               onPress={handleLogin}
               style={styles.submitBtn}
             >
-              Iniciar sesión
+              {t('auth.login.submit')}
             </Button>
 
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textMuted }]}>o</Text>
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>{t('auth.login.or')}</Text>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
             </View>
 
@@ -186,8 +188,8 @@ export default function LoginScreen() {
             style={styles.registerLink}
           >
             <Text style={[styles.registerText, { color: colors.textMuted }]}>
-              ¿No tenés cuenta?{' '}
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>Crear cuenta</Text>
+              {t('auth.login.noAccount')}{' '}
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('auth.login.createAccount')}</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>

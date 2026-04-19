@@ -6,6 +6,7 @@
 
 import { API_BASE_URL, API_TIMEOUT } from '@/constants/api';
 import { storage } from '@/shared/lib/storage';
+import i18n from '@/shared/i18n';
 
 export class ApiError extends Error {
   constructor(
@@ -74,6 +75,13 @@ async function request<T = unknown>(
     }
   }
 
+  // Tell the backend which language to localize LLM responses in.
+  // The user's i18n language is authoritative; fall back to a sensible default.
+  if (!headers.has('Accept-Language')) {
+    const lang = i18n.language || 'es';
+    headers.set('Accept-Language', lang);
+  }
+
   // JSON body
   if (body !== undefined) {
     headers.set('Content-Type', 'application/json');
@@ -137,6 +145,9 @@ export const apiClient = {
     const token = await getToken();
     const headers = new Headers(opts?.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
+    if (!headers.has('Accept-Language')) {
+      headers.set('Accept-Language', i18n.language || 'es');
+    }
     // Don't set Content-Type — browser/RN sets boundary automatically
 
     const controller = new AbortController();

@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -23,6 +24,7 @@ export function NourishmentRing({
   size = 260,
   strokeWidth = 12,
 }: Props) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -61,7 +63,7 @@ export function NourishmentRing({
         <Text style={[styles.calories, { color: colors.text }]}>
           {totalCalories.toLocaleString()}
         </Text>
-        <Text style={[styles.label, { color: colors.textMuted }]}>kcal nourished</Text>
+        <Text style={[styles.label, { color: colors.textMuted }]}>{t('tabs.home.kcalNourished')}</Text>
       </View>
     </View>
   );

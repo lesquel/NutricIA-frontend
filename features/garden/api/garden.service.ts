@@ -22,6 +22,10 @@ export async function checkInHabit(habitId: string): Promise<HabitCheckInRespons
   return apiClient.post<HabitCheckInResponse>(`/habits/${habitId}/check-in`);
 }
 
+export async function deleteHabit(habitId: string): Promise<void> {
+  await apiClient.delete<void>(`/habits/${habitId}`);
+}
+
 export async function fetchWaterLog(date: string): Promise<WaterLogResponse> {
   return apiClient.get<WaterLogResponse>(`/habits/water?target_date=${date}`);
 }

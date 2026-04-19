@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/shared/components/ui/Input';
 import { Button } from '@/shared/components/ui/Button';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -28,6 +29,7 @@ export interface GeneratePlanFormProps {
 }
 
 export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -88,20 +90,20 @@ export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Calorías objetivo</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.form.targetCalories')}</Text>
         <Input
-          label="Calorías diarias"
+          label={t('planner.form.dailyCalories')}
           value={calories}
           onChangeText={setCalories}
           keyboardType="numeric"
           placeholder="2000"
         />
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Macros objetivo (g/día)</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.form.targetMacros')}</Text>
         <View style={styles.macroRow}>
           <View style={styles.macroInput}>
             <Input
-              label="Proteínas (g)"
+              label={t('planner.form.proteinLabel')}
               value={protein}
               onChangeText={setProtein}
               keyboardType="numeric"
@@ -110,7 +112,7 @@ export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
           </View>
           <View style={styles.macroInput}>
             <Input
-              label="Carbohidratos (g)"
+              label={t('planner.form.carbsLabel')}
               value={carbs}
               onChangeText={setCarbs}
               keyboardType="numeric"
@@ -119,7 +121,7 @@ export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
           </View>
           <View style={styles.macroInput}>
             <Input
-              label="Grasas (g)"
+              label={t('planner.form.fatLabel')}
               value={fat}
               onChangeText={setFat}
               keyboardType="numeric"
@@ -128,17 +130,17 @@ export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Restricciones dietéticas</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.form.dietaryRestrictions')}</Text>
         <View style={[styles.toggleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {(
             [
-              { key: 'vegetarian', label: 'Vegetariano' },
-              { key: 'vegan', label: 'Vegano' },
-              { key: 'gluten_free', label: 'Sin gluten' },
+              { key: 'vegetarian', labelKey: 'planner.form.vegetarian' },
+              { key: 'vegan', labelKey: 'planner.form.vegan' },
+              { key: 'gluten_free', labelKey: 'planner.form.glutenFree' },
             ] as const
-          ).map(({ key, label }) => (
+          ).map(({ key, labelKey }) => (
             <View key={key} style={[styles.toggleRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.toggleLabel, { color: colors.text }]}>{label}</Text>
+              <Text style={[styles.toggleLabel, { color: colors.text }]}>{t(labelKey)}</Text>
               <Switch
                 value={constraints[key]}
                 onValueChange={() => toggleConstraint(key)}
@@ -149,11 +151,11 @@ export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
           ))}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Alergias</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.form.allergies')}</Text>
         <View style={styles.allergyInputRow}>
           <View style={styles.allergyInputFlex}>
             <Input
-              placeholder="ej. maní, lácteos..."
+              placeholder={t('planner.form.allergiesPlaceholder')}
               value={allergyInput}
               onChangeText={setAllergyInput}
               onSubmitEditing={addAllergy}
@@ -189,7 +191,7 @@ export function GeneratePlanForm({ onSuccess }: GeneratePlanFormProps) {
           onPress={handleSubmit}
           loading={generatePlan.isPending}
         >
-          Generar plan semanal
+          {t('planner.form.submit')}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>

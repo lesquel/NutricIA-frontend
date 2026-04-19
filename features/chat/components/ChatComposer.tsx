@@ -9,6 +9,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, BorderRadius, FontSize, Spacing } from '@/constants/theme';
 
@@ -20,6 +21,7 @@ export interface ChatComposerProps {
 }
 
 export function ChatComposer({ onSend, disabled = false, initialValue }: ChatComposerProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const [value, setValue] = useState(initialValue ?? '');
@@ -49,7 +51,7 @@ export function ChatComposer({ onSend, disabled = false, initialValue }: ChatCom
           style={[styles.input, { color: colors.text }]}
           value={value}
           onChangeText={setValue}
-          placeholder="Preguntame algo..."
+          placeholder={t('tabs.recipes.composerPlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           maxLength={2000}

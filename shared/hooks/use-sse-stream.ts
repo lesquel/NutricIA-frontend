@@ -10,6 +10,7 @@
  */
 
 import { useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { storage } from '@/shared/lib/storage';
 import { API_BASE_URL } from '@/constants/api';
 
@@ -51,7 +52,11 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
   const abortRef = useRef<AbortController | null>(null);
 
   function stop() {
-    abortRef.current?.abort();
+    try {
+      abortRef.current?.abort();
+    } catch {
+      /* noop — xhr already torn down */
+    }
     abortRef.current = null;
   }
 
@@ -63,6 +68,15 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
     setError(null);
     setStatus('streaming');
 
+    if (Platform.OS === 'web') {
+      _startWithFetch(path, body);
+    } else {
+      _startWithXHR(path, body);
+    }
+  }
+
+  // ── Web path: native fetch + ReadableStream ─────────────────────────────
+  function _startWithFetch(path: string, body: Record<string, unknown>) {
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -92,7 +106,6 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
           setEvents((prev) => [...prev, event]);
         };
 
-        // Prefer streaming reader (available in Hermes ≥ 0.73 and web)
         if (response.body && typeof response.body.getReader === 'function') {
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
@@ -102,21 +115,16 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
-
-            // Process complete events (terminated by \n\n)
             const parts = buffer.split(/(?<=\n\n)/);
-            // Keep the last part (possibly incomplete)
             buffer = parts.pop() ?? '';
             for (const part of parts) {
               parseSSEChunk<T>(part, addEvent);
             }
           }
-          // Flush any remaining buffer
           if (buffer.trim()) {
             parseSSEChunk<T>(buffer, addEvent);
           }
         } else {
-          // Fallback: accumulate full text (no streaming UI — loses token-by-token)
           const text = await response.text();
           parseSSEChunk<T>(text, addEvent);
         }
@@ -127,6 +135,73 @@ export function useSSEStream<T>(): SSEStreamHook<T> {
           setStatus('idle');
           return;
         }
+        const message = err instanceof Error ? err.message : 'SSE stream error';
+        setError(message);
+        setStatus('error');
+      }
+    })();
+  }
+
+  // ── Native path: XMLHttpRequest with progressive onprogress parsing ─────
+  //
+  // React Native's fetch on Android does not reliably expose streamed bodies
+  // for text/event-stream and `await response.text()` can return empty. XHR
+  // with `responseType: 'text'` plus the `progress` event gives us the
+  // accumulated responseText at each chunk, which parses cleanly as SSE.
+  function _startWithXHR(path: string, body: Record<string, unknown>) {
+    (async () => {
+      try {
+        const token = await storage.getItem('auth_token');
+
+        const xhr = new XMLHttpRequest();
+        // Hijack stop(): abort tears down the xhr.
+        abortRef.current = {
+          abort: () => xhr.abort(),
+        } as unknown as AbortController;
+
+        let processedLen = 0;
+        const addEvent = (event: T) => {
+          setEvents((prev) => [...prev, event]);
+        };
+
+        const drain = (final: boolean) => {
+          const text = xhr.responseText ?? '';
+          if (text.length <= processedLen) return;
+          const chunk = text.slice(processedLen);
+          // Split on \n\n — keep the trailing partial for the next tick.
+          const parts = chunk.split('\n\n');
+          const lastPartial = final ? '' : parts.pop() ?? '';
+          for (const part of parts) {
+            if (part.trim()) parseSSEChunk<T>(part, addEvent);
+          }
+          processedLen = text.length - lastPartial.length;
+        };
+
+        xhr.open('POST', `${API_BASE_URL}${path}`);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Accept', 'text/event-stream');
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+        xhr.onprogress = () => drain(false);
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            setError(`HTTP ${xhr.status}`);
+            setStatus('error');
+            return;
+          }
+          drain(true);
+          setStatus('done');
+        };
+        xhr.onerror = () => {
+          setError('Network error');
+          setStatus('error');
+        };
+        xhr.onabort = () => {
+          setStatus('idle');
+        };
+
+        xhr.send(JSON.stringify(body));
+      } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'SSE stream error';
         setError(message);
         setStatus('error');
