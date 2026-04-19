@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,6 +21,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -34,12 +36,12 @@ export default function RegisterScreen() {
 
   const validate = (): boolean => {
     const next: Record<string, string | undefined> = {};
-    if (!name.trim()) next.name = 'El nombre es requerido';
-    if (!email.trim()) next.email = 'El email es requerido';
-    else if (!/\S+@\S+\.\S+/.test(email)) next.email = 'Ingresá un email válido';
-    if (!password) next.password = 'La contraseña es requerida';
-    else if (password.length < 8) next.password = 'Mínimo 8 caracteres';
-    if (password !== confirmPassword) next.confirm = 'Las contraseñas no coinciden';
+    if (!name.trim()) next.name = t('errors.nameRequired');
+    if (!email.trim()) next.email = t('errors.emailRequired');
+    else if (!/\S+@\S+\.\S+/.test(email)) next.email = t('errors.emailInvalid');
+    if (!password) next.password = t('errors.passwordRequired');
+    else if (password.length < 8) next.password = t('errors.passwordMin');
+    if (password !== confirmPassword) next.confirm = t('errors.passwordMismatch');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -56,7 +58,7 @@ export default function RegisterScreen() {
         onError: (err: unknown) => {
           const detail =
             (err as { body?: { detail?: string } })?.body?.detail ??
-            'Error al registrarse. Intentá de nuevo.';
+            t('errors.registerFailed');
           toast.error(detail);
         },
       },
@@ -86,9 +88,9 @@ export default function RegisterScreen() {
             <View style={[styles.logoCircle, { backgroundColor: `${colors.primary}18` }]}>
               <MaterialIcons name="spa" size={40} color={colors.primary} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>Crear cuenta</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('auth.register.title')}</Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              Empezá tu camino hacia una nutrición consciente
+              {t('auth.register.subtitle')}
             </Text>
           </View>
 
@@ -96,10 +98,10 @@ export default function RegisterScreen() {
           <View style={[styles.formCard, { backgroundColor: colors.surface, ...Shadows.soft }]}>
             {/* Name */}
             <Input
-              label="NOMBRE COMPLETO"
-              placeholder="Jane Doe"
+              label={t('auth.register.nameLabel')}
+              placeholder={t('auth.register.namePlaceholder')}
               value={name}
-              onChangeText={(t) => { setName(t); setErrors((e) => ({ ...e, name: undefined })); }}
+              onChangeText={(v) => { setName(v); setErrors((e) => ({ ...e, name: undefined })); }}
               error={errors.name}
               autoCapitalize="words"
               prefix={<MaterialIcons name="person-outline" size={20} color={colors.textMuted} />}
@@ -107,10 +109,10 @@ export default function RegisterScreen() {
 
             {/* Email */}
             <Input
-              label="EMAIL"
-              placeholder="vos@ejemplo.com"
+              label={t('auth.register.emailLabel')}
+              placeholder={t('auth.register.emailPlaceholder')}
               value={email}
-              onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: undefined })); }}
+              onChangeText={(v) => { setEmail(v); setErrors((e) => ({ ...e, email: undefined })); }}
               error={errors.email}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -120,10 +122,10 @@ export default function RegisterScreen() {
 
             {/* Password */}
             <Input
-              label="CONTRASEÑA"
+              label={t('auth.register.passwordLabel')}
               placeholder="••••••••"
               value={password}
-              onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
+              onChangeText={(v) => { setPassword(v); setErrors((e) => ({ ...e, password: undefined })); }}
               error={errors.password}
               secureTextEntry
               prefix={<MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />}
@@ -131,10 +133,10 @@ export default function RegisterScreen() {
 
             {/* Confirm Password */}
             <Input
-              label="CONFIRMAR CONTRASEÑA"
+              label={t('auth.register.confirmLabel')}
               placeholder="••••••••"
               value={confirmPassword}
-              onChangeText={(t) => { setConfirmPassword(t); setErrors((e) => ({ ...e, confirm: undefined })); }}
+              onChangeText={(v) => { setConfirmPassword(v); setErrors((e) => ({ ...e, confirm: undefined })); }}
               error={errors.confirm}
               secureTextEntry
               prefix={<MaterialIcons name="lock-outline" size={20} color={colors.textMuted} />}
@@ -153,7 +155,7 @@ export default function RegisterScreen() {
                   { color: password.length >= 8 ? colors.primary : colors.textMuted },
                 ]}
               >
-                Al menos 8 caracteres
+                {t('auth.register.passwordHint')}
               </Text>
             </View>
 
@@ -165,7 +167,7 @@ export default function RegisterScreen() {
               onPress={handleRegister}
               style={styles.submitBtn}
             >
-              Crear cuenta
+              {t('auth.register.submit')}
             </Button>
           </View>
 
@@ -175,16 +177,16 @@ export default function RegisterScreen() {
             style={styles.loginLink}
           >
             <Text style={[styles.loginText, { color: colors.textMuted }]}>
-              ¿Ya tenés cuenta?{' '}
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>Iniciar sesión</Text>
+              {t('auth.register.haveAccount')}{' '}
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('auth.register.signIn')}</Text>
             </Text>
           </TouchableOpacity>
 
           {/* Terms */}
           <Text style={[styles.terms, { color: colors.textMuted }]}>
-            Al crear una cuenta aceptás nuestros{' '}
-            <Text style={{ fontWeight: '600' }}>Términos de Servicio</Text> y{' '}
-            <Text style={{ fontWeight: '600' }}>Política de Privacidad</Text>
+            {t('auth.register.terms')}{' '}
+            <Text style={{ fontWeight: '600' }}>{t('auth.register.termsOfService')}</Text> {t('auth.register.and')}{' '}
+            <Text style={{ fontWeight: '600' }}>{t('auth.register.privacyPolicy')}</Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

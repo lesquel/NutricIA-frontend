@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
 import { BottomSheet } from '@/shared/components/ui/BottomSheet';
@@ -23,13 +24,21 @@ import { useCurrentPlan } from '@/features/planner/hooks/use-current-plan';
 import { useSwapMeal } from '@/features/planner/hooks/use-swap-meal';
 import type { RecipeCard as RecipeCardType, MealType, PlannedMeal } from '@/shared/types/api';
 
-const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_KEYS = [
+  'planner.days.monday',
+  'planner.days.tuesday',
+  'planner.days.wednesday',
+  'planner.days.thursday',
+  'planner.days.friday',
+  'planner.days.saturday',
+  'planner.days.sunday',
+];
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
-const MEAL_LABELS: Record<MealType, string> = {
-  breakfast: 'Desayuno',
-  lunch: 'Almuerzo',
-  snack: 'Merienda',
-  dinner: 'Cena',
+const MEAL_LABEL_KEYS: Record<MealType, string> = {
+  breakfast: 'planner.meals.breakfast',
+  lunch: 'planner.meals.lunch',
+  snack: 'planner.meals.snack',
+  dinner: 'planner.meals.dinner',
 };
 
 export interface RecipeCardProps {
@@ -52,13 +61,14 @@ function MacroPill({ label, value, color }: MacroPillProps) {
   );
 }
 
-const DIFFICULTY_LABEL: Record<RecipeCardType['difficulty'], string> = {
-  easy: 'Fácil',
-  medium: 'Medio',
-  hard: 'Difícil',
+const DIFFICULTY_KEYS: Record<RecipeCardType['difficulty'], string> = {
+  easy: 'planner.difficulty.easy',
+  medium: 'planner.difficulty.medium',
+  hard: 'planner.difficulty.hard',
 };
 
 export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const toast = useToast();
@@ -78,7 +88,7 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
     }
 
     if (!plan) {
-      toast.info('Generá un plan primero');
+      toast.info(t('tabs.recipes.generatePlanFirst'));
       // Navigate to planner after a short delay so toast is visible
       setTimeout(() => router.push('/planner'), 800);
       return;
@@ -101,7 +111,7 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
       plan.meals.find((m) => m.day_of_week === selectedDay && m.meal_type === selectedMealType);
 
     if (!target) {
-      toast.warning('No hay un slot disponible para ese día y tipo de comida');
+      toast.warning(t('tabs.recipes.noSlotAvailable'));
       setShowSlotPicker(false);
       return;
     }
@@ -126,7 +136,12 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
       },
       {
         onSuccess: () => {
-          toast.success(`Receta guardada en el plan (${DAY_NAMES[selectedDay]} — ${MEAL_LABELS[selectedMealType]})`);
+          toast.success(
+            t('tabs.recipes.recipeSaved', {
+              day: t(DAY_KEYS[selectedDay]),
+              meal: t(MEAL_LABEL_KEYS[selectedMealType]),
+            }),
+          );
           setShowSlotPicker(false);
         },
       },
@@ -144,22 +159,22 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
       {/* Macros row */}
       <View style={styles.macrosRow}>
         <MacroPill
-          label="kcal"
+          label={t('tabs.recipes.macroKcal')}
           value={String(Math.round(macros.calories))}
           color={colors.calorieOrange}
         />
         <MacroPill
-          label="prot"
+          label={t('tabs.recipes.macroProtein')}
           value={`${macros.protein_g.toFixed(1)}g`}
           color={colors.proteinBlue}
         />
         <MacroPill
-          label="carbs"
+          label={t('tabs.recipes.macroCarbs')}
           value={`${macros.carbs_g.toFixed(1)}g`}
           color={colors.carbsAmber}
         />
         <MacroPill
-          label="grasa"
+          label={t('tabs.recipes.macroFat')}
           value={`${macros.fat_g.toFixed(1)}g`}
           color={colors.fatPurple}
         />
@@ -176,13 +191,13 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
         <View style={styles.metaItem}>
           <MaterialIcons name="bar-chart" size={14} color={colors.textMuted} />
           <Text style={[styles.metaText, { color: colors.textMuted }]}>
-            {DIFFICULTY_LABEL[recipe.difficulty]}
+            {t(DIFFICULTY_KEYS[recipe.difficulty])}
           </Text>
         </View>
         <View style={styles.metaItem}>
           <MaterialIcons name="people" size={14} color={colors.textMuted} />
           <Text style={[styles.metaText, { color: colors.textMuted }]}>
-            {recipe.servings} {recipe.servings === 1 ? 'porción' : 'porciones'}
+            {recipe.servings} {recipe.servings === 1 ? t('planner.actions.servingSingular') : t('planner.actions.servingPlural')}
           </Text>
         </View>
       </View>
@@ -191,7 +206,7 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       {/* Ingredients */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Ingredientes</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('tabs.recipes.ingredients')}</Text>
       {recipe.ingredients.map((ingredient, i) => (
         <View key={i} style={styles.listItem}>
           <View style={[styles.bullet, { backgroundColor: colors.primary }]} />
@@ -203,7 +218,7 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       {/* Steps */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Preparación</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('tabs.recipes.preparation')}</Text>
       {recipe.steps.map((step, i) => (
         <View key={i} style={styles.stepItem}>
           <View style={[styles.stepNumber, { backgroundColor: colors.primary }]}>
@@ -221,18 +236,18 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
         onPress={handleSave}
         leftIcon={<MaterialIcons name="bookmark-border" size={16} color={colors.primary} />}
       >
-        Guardar receta
+        {t('tabs.recipes.saveRecipe')}
       </Button>
     </Card>
 
     {/* Slot picker BottomSheet */}
     <BottomSheet visible={showSlotPicker} onClose={() => setShowSlotPicker(false)} snapPoints={['55%']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={[styles.slotTitle, { color: colors.text }]}>¿Para qué día y comida?</Text>
+        <Text style={[styles.slotTitle, { color: colors.text }]}>{t('tabs.recipes.forWhichDay')}</Text>
 
-        <Text style={[styles.slotLabel, { color: colors.textMuted }]}>Día</Text>
+        <Text style={[styles.slotLabel, { color: colors.textMuted }]}>{t('tabs.recipes.dayLabel')}</Text>
         <View style={styles.slotChips}>
-          {DAY_NAMES.map((name, i) => (
+          {DAY_KEYS.map((dayKey, i) => (
             <TouchableOpacity
               key={i}
               onPress={() => setSelectedDay(i)}
@@ -245,13 +260,13 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
               ]}
             >
               <Text style={[styles.slotChipText, { color: selectedDay === i ? '#FFF' : colors.text }]}>
-                {name.slice(0, 3)}
+                {t(dayKey).slice(0, 3)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={[styles.slotLabel, { color: colors.textMuted }]}>Comida</Text>
+        <Text style={[styles.slotLabel, { color: colors.textMuted }]}>{t('tabs.recipes.mealLabel')}</Text>
         <View style={styles.slotChips}>
           {MEAL_TYPES.map((type) => (
             <TouchableOpacity
@@ -266,7 +281,7 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
               ]}
             >
               <Text style={[styles.slotChipText, { color: selectedMealType === type ? '#FFF' : colors.text }]}>
-                {MEAL_LABELS[type]}
+                {t(MEAL_LABEL_KEYS[type])}
               </Text>
             </TouchableOpacity>
           ))}
@@ -278,7 +293,7 @@ export function RecipeCard({ recipe, onSave }: RecipeCardProps) {
           onPress={handleConfirmSlot}
           loading={swapMeal.isPending}
         >
-          Guardar en el plan
+          {t('tabs.recipes.saveInPlan')}
         </Button>
       </ScrollView>
     </BottomSheet>

@@ -5,23 +5,24 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '@/shared/components/ui/BottomSheet';
 import { Button } from '@/shared/components/ui/Button';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import type { PlannedMeal } from '@/shared/types/api';
 
-const DIFFICULTY_LABEL: Record<string, string> = {
-  easy: 'Fácil',
-  medium: 'Medio',
-  hard: 'Difícil',
+const DIFFICULTY_KEYS: Record<string, string> = {
+  easy: 'planner.difficulty.easy',
+  medium: 'planner.difficulty.medium',
+  hard: 'planner.difficulty.hard',
 };
 
-const MEAL_LABELS: Record<PlannedMeal['meal_type'], string> = {
-  breakfast: 'Desayuno',
-  lunch: 'Almuerzo',
-  snack: 'Merienda',
-  dinner: 'Cena',
+const MEAL_LABEL_KEYS: Record<PlannedMeal['meal_type'], string> = {
+  breakfast: 'planner.meals.breakfast',
+  lunch: 'planner.meals.lunch',
+  snack: 'planner.meals.snack',
+  dinner: 'planner.meals.dinner',
 };
 
 export interface MealActionsSheetProps {
@@ -32,6 +33,7 @@ export interface MealActionsSheetProps {
 }
 
 export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSheetProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -43,13 +45,13 @@ export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSh
           <View style={styles.badgeRow}>
             <View style={[styles.badge, { backgroundColor: colors.primary + '22' }]}>
               <Text style={[styles.badgeText, { color: colors.primary }]}>
-                {MEAL_LABELS[meal.meal_type]}
+                {t(MEAL_LABEL_KEYS[meal.meal_type])}
               </Text>
             </View>
             {meal.is_logged && (
               <View style={[styles.badge, { backgroundColor: colors.success + '22' }]}>
                 <MaterialIcons name="check-circle" size={12} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>Consumido</Text>
+                <Text style={[styles.badgeText, { color: colors.success }]}>{t('planner.actions.eaten')}</Text>
               </View>
             )}
           </View>
@@ -65,15 +67,15 @@ export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSh
             </View>
             <View style={[styles.macroPill, { backgroundColor: colors.proteinBlue + '22' }]}>
               <Text style={[styles.macroValue, { color: colors.proteinBlue }]}>{meal.macros.protein_g.toFixed(1)}g</Text>
-              <Text style={[styles.macroLabel, { color: colors.proteinBlue + 'CC' }]}>prot</Text>
+              <Text style={[styles.macroLabel, { color: colors.proteinBlue + 'CC' }]}>{t('tabs.recipes.macroProtein')}</Text>
             </View>
             <View style={[styles.macroPill, { backgroundColor: colors.carbsAmber + '22' }]}>
               <Text style={[styles.macroValue, { color: colors.carbsAmber }]}>{meal.macros.carbs_g.toFixed(1)}g</Text>
-              <Text style={[styles.macroLabel, { color: colors.carbsAmber + 'CC' }]}>carbs</Text>
+              <Text style={[styles.macroLabel, { color: colors.carbsAmber + 'CC' }]}>{t('tabs.recipes.macroCarbs')}</Text>
             </View>
             <View style={[styles.macroPill, { backgroundColor: colors.fatPurple + '22' }]}>
               <Text style={[styles.macroValue, { color: colors.fatPurple }]}>{meal.macros.fat_g.toFixed(1)}g</Text>
-              <Text style={[styles.macroLabel, { color: colors.fatPurple + 'CC' }]}>grasa</Text>
+              <Text style={[styles.macroLabel, { color: colors.fatPurple + 'CC' }]}>{t('tabs.recipes.macroFat')}</Text>
             </View>
           </View>
 
@@ -88,13 +90,13 @@ export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSh
             {meal.difficulty != null && (
               <View style={styles.metaItem}>
                 <MaterialIcons name="bar-chart" size={14} color={colors.textMuted} />
-                <Text style={[styles.metaText, { color: colors.textMuted }]}>{DIFFICULTY_LABEL[meal.difficulty]}</Text>
+                <Text style={[styles.metaText, { color: colors.textMuted }]}>{t(DIFFICULTY_KEYS[meal.difficulty] ?? 'planner.difficulty.medium')}</Text>
               </View>
             )}
             <View style={styles.metaItem}>
               <MaterialIcons name="people" size={14} color={colors.textMuted} />
               <Text style={[styles.metaText, { color: colors.textMuted }]}>
-                {meal.servings} {meal.servings === 1 ? 'porción' : 'porciones'}
+                {meal.servings} {meal.servings === 1 ? t('planner.actions.servingSingular') : t('planner.actions.servingPlural')}
               </Text>
             </View>
           </View>
@@ -105,7 +107,7 @@ export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSh
           {/* Ingredients */}
           {meal.recipe_ingredients.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Ingredientes</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('planner.actions.ingredients')}</Text>
               {meal.recipe_ingredients.map((ingredient, i) => (
                 <View key={i} style={styles.listItem}>
                   <View style={[styles.bullet, { backgroundColor: colors.primary }]} />
@@ -124,7 +126,7 @@ export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSh
               leftIcon={<MaterialIcons name="swap-horiz" size={18} color={colors.primary} />}
               style={styles.actionBtn}
             >
-              Reemplazar
+              {t('planner.actions.swap')}
             </Button>
             <Button
               variant="primary"
@@ -133,7 +135,7 @@ export function MealActionsSheet({ meal, onClose, onSwap, onLog }: MealActionsSh
               leftIcon={<MaterialIcons name="check" size={18} color="#FFF" />}
               style={styles.actionBtn}
             >
-              {meal.is_logged ? 'Ya consumido' : 'Marcar como comido'}
+              {meal.is_logged ? t('planner.actions.alreadyEaten') : t('planner.actions.markEaten')}
             </Button>
           </View>
         </ScrollView>

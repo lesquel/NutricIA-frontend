@@ -28,6 +28,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useCurrentPlan } from '@/features/planner/hooks/use-current-plan';
@@ -40,6 +41,7 @@ import { Button } from '@/shared/components/ui/Button';
 import type { PlannedMeal } from '@/shared/types/api';
 
 export default function PlannerScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -56,9 +58,16 @@ export default function PlannerScreen() {
 
   function handleSwap() {
     if (!selectedMeal || !plan) return;
-    const dayName = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][selectedMeal.day_of_week] ?? '';
-    const mealLabel = { breakfast: 'desayuno', lunch: 'almuerzo', snack: 'merienda', dinner: 'cena' }[selectedMeal.meal_type];
-    const prompt = `Reemplazá el ${mealLabel} del ${dayName} por algo diferente`;
+    const dayKeys = ['planner.days.monday', 'planner.days.tuesday', 'planner.days.wednesday', 'planner.days.thursday', 'planner.days.friday', 'planner.days.saturday', 'planner.days.sunday'];
+    const dayName = t(dayKeys[selectedMeal.day_of_week] ?? 'planner.days.monday');
+    const mealTypeKeyMap = {
+      breakfast: 'planner.meals.breakfastLower',
+      lunch: 'planner.meals.lunchLower',
+      snack: 'planner.meals.snackLower',
+      dinner: 'planner.meals.dinnerLower',
+    };
+    const mealLabel = t(mealTypeKeyMap[selectedMeal.meal_type]);
+    const prompt = t('planner.swapPrompt', { meal: mealLabel, day: dayName });
 
     setSelectedMeal(null);
     router.push({
@@ -95,7 +104,7 @@ export default function PlannerScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Plan semanal</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('planner.headerTitle')}</Text>
         <TouchableOpacity onPress={() => setShowGenerateModal(true)} style={styles.addBtn}>
           <MaterialIcons name="autorenew" size={22} color={colors.primary} />
         </TouchableOpacity>
@@ -112,9 +121,9 @@ export default function PlannerScreen() {
             <View style={[styles.emptyIcon, { backgroundColor: colors.primary + '18' }]}>
               <MaterialIcons name="calendar-today" size={48} color={colors.primary} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Sin plan activo</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('planner.emptyTitle')}</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              Generá tu plan semanal personalizado según tus objetivos y preferencias.
+              {t('planner.emptySubtitle')}
             </Text>
           </View>
           <View style={styles.formWrapper}>
@@ -139,7 +148,7 @@ export default function PlannerScreen() {
               onPress={() => setShowGenerateModal(true)}
               leftIcon={<MaterialIcons name="autorenew" size={18} color={colors.primary} />}
             >
-              Generar nuevo plan
+              {t('planner.generateNew')}
             </Button>
           </View>
         </View>
@@ -154,7 +163,7 @@ export default function PlannerScreen() {
       />
 
       {/* Generate Plan Modal */}
-      <Modal visible={showGenerateModal} onClose={() => setShowGenerateModal(false)} title="Nuevo plan">
+      <Modal visible={showGenerateModal} onClose={() => setShowGenerateModal(false)} title={t('planner.newPlanTitle')}>
         <GeneratePlanForm onSuccess={() => setShowGenerateModal(false)} />
       </Modal>
     </SafeAreaView>

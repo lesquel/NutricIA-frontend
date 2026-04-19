@@ -6,11 +6,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { resolveMediaUrl } from '../lib/media-url';
-import type { MealResponse } from '@/shared/types/api';
+import type { MealResponse, MealType } from '@/shared/types/api';
 
 type LegacyMeal = {
   id: string;
@@ -30,21 +31,27 @@ function isApiMeal(meal: MealResponse | LegacyMeal): meal is MealResponse {
   return 'meal_type' in meal && 'name' in meal;
 }
 
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 function formatTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+const MEAL_TYPE_KEYS: Record<MealType, string> = {
+  breakfast: 'planner.meals.breakfast',
+  lunch: 'planner.meals.lunch',
+  snack: 'planner.meals.snack',
+  dinner: 'planner.meals.dinner',
+};
+
 export function MealCard({ meal, onPress }: MealCardProps) {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
   const name = isApiMeal(meal) ? meal.name : meal.name;
-  const mealType = isApiMeal(meal) ? capitalize(meal.meal_type) : meal.mealType;
+  const mealType = isApiMeal(meal)
+    ? (MEAL_TYPE_KEYS[meal.meal_type] ? t(MEAL_TYPE_KEYS[meal.meal_type]) : meal.meal_type)
+    : meal.mealType;
   const time = isApiMeal(meal) ? formatTime(meal.logged_at) : meal.time;
   const { calories } = meal;
   const tag = isApiMeal(meal) ? meal.tags?.[0] : meal.tag;

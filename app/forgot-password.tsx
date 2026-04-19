@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -19,6 +20,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -30,11 +32,11 @@ export default function ForgotPasswordScreen() {
 
   const validate = (): boolean => {
     if (!email.trim()) {
-      setEmailError('El email es requerido');
+      setEmailError(t('errors.emailRequired'));
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setEmailError('Ingresá un email válido');
+      setEmailError(t('errors.emailInvalid'));
       return false;
     }
     setEmailError(undefined);
@@ -46,12 +48,12 @@ export default function ForgotPasswordScreen() {
 
     forgotPassword.mutate(email.trim().toLowerCase(), {
       onSuccess: () => {
-        toast.success('Si el email está registrado, recibirás un link de restablecimiento');
+        toast.success(t('auth.forgot.success'));
         router.back();
       },
       onError: () => {
         // Always show generic message to avoid user enumeration
-        toast.success('Si el email está registrado, recibirás un link de restablecimiento');
+        toast.success(t('auth.forgot.success'));
         router.back();
       },
     });
@@ -76,7 +78,7 @@ export default function ForgotPasswordScreen() {
             leftIcon={<MaterialIcons name="arrow-back" size={20} color={colors.primary} />}
             style={styles.backBtn}
           >
-            Volver
+            {t('auth.forgot.back')}
           </Button>
 
           {/* Header */}
@@ -84,20 +86,20 @@ export default function ForgotPasswordScreen() {
             <View style={[styles.iconCircle, { backgroundColor: `${colors.primary}18` }]}>
               <MaterialIcons name="lock-reset" size={40} color={colors.primary} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>¿Olvidaste tu contraseña?</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('auth.forgot.title')}</Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              Ingresá tu email y te enviaremos un link para restablecer tu contraseña.
+              {t('auth.forgot.subtitle')}
             </Text>
           </View>
 
           {/* Form Card */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, ...Shadows.soft }]}>
             <Input
-              label="EMAIL"
-              placeholder="vos@ejemplo.com"
+              label={t('auth.forgot.emailLabel')}
+              placeholder={t('auth.forgot.emailPlaceholder')}
               value={email}
-              onChangeText={(t) => {
-                setEmail(t);
+              onChangeText={(v) => {
+                setEmail(v);
                 if (emailError) setEmailError(undefined);
               }}
               error={emailError}
@@ -114,7 +116,7 @@ export default function ForgotPasswordScreen() {
               onPress={handleSubmit}
               style={styles.submitBtn}
             >
-              Enviar link
+              {t('auth.forgot.submit')}
             </Button>
           </View>
         </ScrollView>

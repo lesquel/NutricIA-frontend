@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, FontSize, Spacing, type ThemeColors } from '@/constants/theme';
 import { useToast } from '@/shared/hooks/use-toast';
@@ -33,11 +34,11 @@ import { ChatComposer } from '@/features/chat/components/ChatComposer';
 import { TypingIndicator } from '@/features/chat/components/TypingIndicator';
 import type { LocalMessage } from '@/features/chat/hooks/use-recipe-chat';
 
-const SUGGESTED_PROMPTS = [
-  '¿Qué puedo cocinar con lo que comí esta semana?',
-  'Recomendame algo bajo en carbos para la cena',
-  'Dame ideas de almuerzo vegetariano',
-  '¿Cómo preparo una merienda alta en proteínas?',
+const SUGGESTED_PROMPT_KEYS = [
+  'tabs.recipes.suggested1',
+  'tabs.recipes.suggested2',
+  'tabs.recipes.suggested3',
+  'tabs.recipes.suggested4',
 ];
 
 function EmptyState({
@@ -47,34 +48,39 @@ function EmptyState({
   onPrompt: (text: string) => void;
   colors: ThemeColors;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIcon, { backgroundColor: colors.primary + '18' }]}>
         <MaterialIcons name="restaurant" size={40} color={colors.primary} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>Recetas IA</Text>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('tabs.recipes.title')}</Text>
       <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-        Contame qué tenés ganas de cocinar y te armo una receta personalizada.
+        {t('tabs.recipes.emptySubtitle')}
       </Text>
 
       <View style={styles.promptsContainer}>
-        {SUGGESTED_PROMPTS.map((prompt, i) => (
-          <TouchableOpacity
-            key={i}
-            style={[styles.promptChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => onPrompt(prompt)}
-            activeOpacity={0.75}
-          >
-            <Text style={[styles.promptText, { color: colors.text }]}>{prompt}</Text>
-            <MaterialIcons name="north-east" size={14} color={colors.primary} />
-          </TouchableOpacity>
-        ))}
+        {SUGGESTED_PROMPT_KEYS.map((key, i) => {
+          const prompt = t(key);
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[styles.promptChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => onPrompt(prompt)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.promptText, { color: colors.text }]}>{prompt}</Text>
+              <MaterialIcons name="north-east" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 export default function RecipesScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const toast = useToast();
@@ -90,7 +96,7 @@ export default function RecipesScreen() {
   // Show error toast when SSE fails
   useEffect(() => {
     if (status === 'error') {
-      toast.error('No se pudo conectar con el asistente. Intentá de nuevo.');
+      toast.error(t('errors.chatConnection'));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
@@ -123,7 +129,7 @@ export default function RecipesScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
           <MaterialIcons name="restaurant" size={22} color={colors.primary} />
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Recetas IA</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('tabs.recipes.title')}</Text>
         </View>
         {hasMessages && (
           <TouchableOpacity
@@ -132,7 +138,7 @@ export default function RecipesScreen() {
             activeOpacity={0.75}
           >
             <MaterialIcons name="add" size={18} color={colors.primary} />
-            <Text style={[styles.newChatLabel, { color: colors.primary }]}>Nueva</Text>
+            <Text style={[styles.newChatLabel, { color: colors.primary }]}>{t('tabs.recipes.newChat')}</Text>
           </TouchableOpacity>
         )}
       </View>

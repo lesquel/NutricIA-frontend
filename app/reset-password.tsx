@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, FontSize, BorderRadius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -19,6 +20,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 
 export default function ResetPasswordScreen() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -35,12 +37,12 @@ export default function ResetPasswordScreen() {
   const validate = (): boolean => {
     const next: typeof errors = {};
     if (!password) {
-      next.password = 'La contraseña es requerida';
+      next.password = t('errors.passwordRequired');
     } else if (password.length < 8) {
-      next.password = 'Mínimo 8 caracteres';
+      next.password = t('errors.passwordMin');
     }
     if (password !== confirmPassword) {
-      next.confirm = 'Las contraseñas no coinciden';
+      next.confirm = t('errors.passwordMismatch');
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -50,7 +52,7 @@ export default function ResetPasswordScreen() {
     if (!validate()) return;
 
     if (!token) {
-      toast.error('Token inválido o expirado. Solicitá un nuevo link.');
+      toast.error(t('errors.tokenInvalid'));
       return;
     }
 
@@ -58,13 +60,13 @@ export default function ResetPasswordScreen() {
       { token, newPassword: password },
       {
         onSuccess: () => {
-          toast.success('Contraseña restablecida. Podés iniciar sesión.');
+          toast.success(t('auth.reset.success'));
           router.replace('/login');
         },
         onError: (err: unknown) => {
           const detail =
             (err as { body?: { detail?: string } })?.body?.detail ??
-            'Token inválido o expirado. Solicitá un nuevo link.';
+            t('errors.tokenInvalid');
           toast.error(detail);
         },
       },
@@ -90,7 +92,7 @@ export default function ResetPasswordScreen() {
             leftIcon={<MaterialIcons name="arrow-back" size={20} color={colors.primary} />}
             style={styles.backBtn}
           >
-            Ir al login
+            {t('auth.reset.back')}
           </Button>
 
           {/* Header */}
@@ -98,20 +100,20 @@ export default function ResetPasswordScreen() {
             <View style={[styles.iconCircle, { backgroundColor: `${colors.primary}18` }]}>
               <MaterialIcons name="lock" size={40} color={colors.primary} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>Nueva contraseña</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('auth.reset.title')}</Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              Elegí una contraseña segura de al menos 8 caracteres.
+              {t('auth.reset.subtitle')}
             </Text>
           </View>
 
           {/* Form Card */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, ...Shadows.soft }]}>
             <Input
-              label="NUEVA CONTRASEÑA"
+              label={t('auth.reset.passwordLabel')}
               placeholder="••••••••"
               value={password}
-              onChangeText={(t) => {
-                setPassword(t);
+              onChangeText={(v) => {
+                setPassword(v);
                 if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
               }}
               error={errors.password}
@@ -120,11 +122,11 @@ export default function ResetPasswordScreen() {
             />
 
             <Input
-              label="CONFIRMAR CONTRASEÑA"
+              label={t('auth.reset.confirmLabel')}
               placeholder="••••••••"
               value={confirmPassword}
-              onChangeText={(t) => {
-                setConfirmPassword(t);
+              onChangeText={(v) => {
+                setConfirmPassword(v);
                 if (errors.confirm) setErrors((e) => ({ ...e, confirm: undefined }));
               }}
               error={errors.confirm}
@@ -139,7 +141,7 @@ export default function ResetPasswordScreen() {
               onPress={handleSubmit}
               style={styles.submitBtn}
             >
-              Restablecer contraseña
+              {t('auth.reset.submit')}
             </Button>
           </View>
         </ScrollView>

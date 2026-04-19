@@ -16,10 +16,10 @@ export type MealSection = {
 };
 
 const SECTION_ORDER: { title: string; mealType: MealType; icon: string }[] = [
-  { title: 'Breakfast', mealType: 'breakfast', icon: 'wb-sunny' },
-  { title: 'Lunch', mealType: 'lunch', icon: 'light-mode' },
-  { title: 'Snacks', mealType: 'snack', icon: 'cookie' },
-  { title: 'Dinner', mealType: 'dinner', icon: 'nightlight-round' },
+  { title: 'tabs.journal.breakfast', mealType: 'breakfast', icon: 'wb-sunny' },
+  { title: 'tabs.journal.lunch', mealType: 'lunch', icon: 'light-mode' },
+  { title: 'tabs.journal.snacks', mealType: 'snack', icon: 'cookie' },
+  { title: 'tabs.journal.dinner', mealType: 'dinner', icon: 'nightlight-round' },
 ];
 
 function groupMealsIntoSections(meals: MealResponse[]): MealSection[] {
