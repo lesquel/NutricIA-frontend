@@ -50,75 +50,93 @@ export function useRecipeChat(): UseRecipeChatResult {
 
   // Ref to track the current assistant message id while streaming
   const assistantMsgIdRef = useRef<string | null>(null);
+  // Index of the next unprocessed event. When events arrive batched (common
+  // on native XHR onprogress), we must drain all of them in order — processing
+  // only `events[last]` drops every intermediate token and scrambles the
+  // rendered reply.
+  const processedUpToRef = useRef(0);
 
-  // Process incoming SSE events
+  // Process incoming SSE events in order, draining any that have accumulated
+  // since the last render.
   useEffect(() => {
-    const latestEvent = sse.events[sse.events.length - 1];
-    if (!latestEvent) return;
+    if (sse.events.length <= processedUpToRef.current) return;
 
-    switch (latestEvent.type) {
-      case 'token': {
-        const token = latestEvent.content;
-        const assistantId = assistantMsgIdRef.current;
-        if (!assistantId) {
-          // First token — create assistant message
-          const newId = localId();
-          assistantMsgIdRef.current = newId;
-          setMessages((prev) => [
-            ...prev,
-            { id: newId, role: 'assistant', content: token },
-          ]);
-        } else {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: m.content + token }
-                : m,
-            ),
-          );
-        }
-        break;
+    const pending = sse.events.slice(processedUpToRef.current);
+    processedUpToRef.current = sse.events.length;
+
+    // Collect token appends into a single string so we can apply one state
+    // update per render instead of one per event — keeps content in order
+    // and avoids N sequential setState calls for a long burst.
+    let pendingTokens = '';
+    const applyPendingTokens = () => {
+      if (!pendingTokens) return;
+      const tokens = pendingTokens;
+      pendingTokens = '';
+      const assistantId = assistantMsgIdRef.current;
+      if (!assistantId) {
+        const newId = localId();
+        assistantMsgIdRef.current = newId;
+        setMessages((prev) => [
+          ...prev,
+          { id: newId, role: 'assistant', content: tokens },
+        ]);
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: m.content + tokens } : m,
+          ),
+        );
       }
+    };
 
-      case 'recipe_card': {
-        const recipe = latestEvent.data;
-        const assistantId = assistantMsgIdRef.current;
-        if (assistantId) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, recipes: [...(m.recipes ?? []), recipe] }
-                : m,
-            ),
-          );
+    for (const event of pending) {
+      switch (event.type) {
+        case 'token': {
+          pendingTokens += event.content;
+          break;
         }
-        break;
-      }
 
-      case 'done': {
-        const { conversation_id, message_id } = latestEvent;
-        // Update conversationId from server
-        setConversationId(conversation_id);
-        // Replace local assistant message id with server id
-        const assistantId = assistantMsgIdRef.current;
-        if (assistantId) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId ? { ...m, id: message_id } : m,
-            ),
-          );
-          assistantMsgIdRef.current = null;
+        case 'recipe_card': {
+          applyPendingTokens();
+          const recipe = event.data;
+          const assistantId = assistantMsgIdRef.current;
+          if (assistantId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, recipes: [...(m.recipes ?? []), recipe] }
+                  : m,
+              ),
+            );
+          }
+          break;
         }
-        // Invalidate conversations list
-        void queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        break;
-      }
 
-      case 'error': {
-        // Error message will be surfaced via sse.status === 'error'
-        break;
+        case 'done': {
+          applyPendingTokens();
+          const { conversation_id, message_id } = event;
+          setConversationId(conversation_id);
+          const assistantId = assistantMsgIdRef.current;
+          if (assistantId) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, id: message_id } : m,
+              ),
+            );
+            assistantMsgIdRef.current = null;
+          }
+          void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          break;
+        }
+
+        case 'error': {
+          // Surfaced via sse.status === 'error'
+          break;
+        }
       }
     }
+
+    applyPendingTokens();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sse.events.length]);
 
@@ -134,6 +152,7 @@ export function useRecipeChat(): UseRecipeChatResult {
     ]);
 
     assistantMsgIdRef.current = null;
+    processedUpToRef.current = 0;
 
     const { path, body } = chatService.streamMessageConfig(
       trimmed,
@@ -147,11 +166,13 @@ export function useRecipeChat(): UseRecipeChatResult {
     setMessages([]);
     setConversationId(null);
     assistantMsgIdRef.current = null;
+    processedUpToRef.current = 0;
   }
 
   async function loadConversation(id: string) {
     sse.stop();
     assistantMsgIdRef.current = null;
+    processedUpToRef.current = 0;
     setConversationId(id);
     try {
       // Fetch the full history — high limit because we show everything.
