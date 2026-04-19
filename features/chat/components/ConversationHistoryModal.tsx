@@ -29,20 +29,52 @@ interface DateGroup {
   items: ConversationSummary[];
 }
 
+const ES_MONTHS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+const EN_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  } catch {
+    return '';
+  }
+}
+
+function formatDayLabel(day: Date, locale: string): string {
+  // Hermes on Android ships without full ICU, so `new Intl.DateTimeFormat`
+  // throws "Cannot convert undefined value to object" for some locales.
+  // Hand-roll a minimal formatter for the only two locales we support.
+  const months = locale.startsWith('en') ? EN_MONTHS : ES_MONTHS;
+  const d = day.getDate();
+  const m = months[day.getMonth()];
+  const y = day.getFullYear();
+  return locale.startsWith('en') ? `${m} ${d}, ${y}` : `${d} de ${m} de ${y}`;
+}
+
 function groupByDate(items: ConversationSummary[], locale: string): DateGroup[] {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
-  const formatter = new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
   const bucket = new Map<string, ConversationSummary[]>();
   for (const item of items) {
-    const created = new Date(item.updated_at || item.created_at);
+    if (!item) continue;
+    const rawTs = item.updated_at || item.created_at;
+    if (!rawTs) continue;
+    const created = new Date(rawTs);
+    if (Number.isNaN(created.getTime())) continue;
     const day = new Date(
       created.getFullYear(),
       created.getMonth(),
@@ -51,7 +83,7 @@ function groupByDate(items: ConversationSummary[], locale: string): DateGroup[] 
     let label: string;
     if (day.getTime() === today.getTime()) label = '__today__';
     else if (day.getTime() === yesterday.getTime()) label = '__yesterday__';
-    else label = formatter.format(day);
+    else label = formatDayLabel(day, locale);
     if (!bucket.has(label)) bucket.set(label, []);
     bucket.get(label)!.push(item);
   }
@@ -97,8 +129,8 @@ export function ConversationHistoryModal({
   });
 
   const groups = useMemo(() => {
-    if (!data) return [];
-    return groupByDate(data.items, i18n.language);
+    if (!data?.items) return [];
+    return groupByDate(data.items, i18n.language ?? 'es');
   }, [data, i18n.language]);
 
   function renderGroup({ item }: { item: DateGroup }) {
@@ -137,10 +169,7 @@ export function ConversationHistoryModal({
                 {conv.title || t('tabs.recipes.historyUntitled')}
               </Text>
               <Text style={[styles.rowTime, { color: colors.textMuted }]}>
-                {new Date(conv.updated_at || conv.created_at).toLocaleTimeString(
-                  i18n.language,
-                  { hour: '2-digit', minute: '2-digit' },
-                )}
+                {formatTime(conv.updated_at || conv.created_at)}
               </Text>
             </TouchableOpacity>
           );

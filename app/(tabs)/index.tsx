@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+
+import { resolveMediaUrl } from '../../shared/lib/media-url';
 
 import { Colors, Shadows, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -49,6 +51,7 @@ export default function DashboardScreen() {
   }, [t]);
 
   const displayName = user?.name?.split(' ')[0] ?? t('tabs.home.guestName');
+  const avatarUrl = resolveMediaUrl(user?.avatar_url);
   const isLoading = summaryLoading || mealsLoading;
 
   return (
@@ -61,8 +64,17 @@ export default function DashboardScreen() {
         <TouchableOpacity
           onPress={() => router.push('/settings')}
           style={[styles.avatar, { borderColor: colors.surface, backgroundColor: colors.surface }]}
+          accessibilityLabel={t('tabs.home.openSettings', { defaultValue: 'Open settings' })}
         >
-          <MaterialIcons name="person" size={28} color={colors.primary} />
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <MaterialIcons name="person" size={28} color={colors.primary} />
+          )}
           <View style={[styles.onlineDot, { backgroundColor: colors.primary, borderColor: colors.background }]} />
         </TouchableOpacity>
       </View>
@@ -239,6 +251,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
   },
   onlineDot: {
     position: 'absolute',
